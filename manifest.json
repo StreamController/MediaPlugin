@@ -1,5 +1,6 @@
 {
     "version": "1.0.0",
     "thumbnail": "Thumbnail.png",
-    "id": "dev_core447_MediaPlugin"
+    "id": "dev_core447_MediaPlugin",
+    "name": "Media"
 }
