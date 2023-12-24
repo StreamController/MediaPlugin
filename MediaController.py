@@ -2,6 +2,8 @@ from itertools import groupby
 import dbus
 import sys
 
+from loguru import logger as log
+
 class MediaController:
     def __init__(self):
         self.session_bus = dbus.SessionBus()
@@ -39,9 +41,12 @@ class MediaController:
         ifaces = []
         for player in self.mpris_players:
             properties = dbus.Interface(player, 'org.freedesktop.DBus.Properties')
-            if player_name in [None, "", properties.Get('org.mpris.MediaPlayer2', 'Identity')]:
-                iface = dbus.Interface(player, 'org.mpris.MediaPlayer2.Player')
-                ifaces.append(iface)
+            try:
+                if player_name in [None, "", properties.Get('org.mpris.MediaPlayer2', 'Identity')]:
+                    iface = dbus.Interface(player, 'org.mpris.MediaPlayer2.Player')
+                    ifaces.append(iface)
+            except dbus.exceptions.DBusException as e:
+                log.warning(e)
         return ifaces
     
     def pause(self, player_name: str = None):
