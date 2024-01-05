@@ -177,7 +177,7 @@ class MediaController:
             try:
                 iface.Previous()
                 status.append(True)
-            except dbus.exceptions.DBusException as e:
+            except (KeyError, dbus.exceptions.DBusException) as e:
                 print(e)
                 status.append(False)
 
@@ -190,7 +190,7 @@ class MediaController:
             try:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 status.append(str(properties.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus')))
-            except dbus.exceptions.DBusException as e:
+            except (KeyError, dbus.exceptions.DBusException) as e:
                 print(e)
                 status.append(None)
 
@@ -204,7 +204,7 @@ class MediaController:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 titles.append(str(metadata['xesam:title']))
-            except dbus.exceptions.DBusException as e:
+            except (KeyError, dbus.exceptions.DBusException) as e:
                 print(e)
                 titles.append(None)
 
@@ -218,7 +218,7 @@ class MediaController:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 titles.append(str(metadata['xesam:artist'][0]))
-            except dbus.exceptions.DBusException as e:
+            except (KeyError, dbus.exceptions.DBusException) as e:
                 print(e)
                 titles.append(None)
 
