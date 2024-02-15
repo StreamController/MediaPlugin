@@ -1,4 +1,6 @@
 from src.backend.PluginManager.ActionBase import ActionBase
+from src.backend.PluginManager.PluginBase import PluginBase
+from src.backend.PageManagement.Page import Page
 
 # Import gtk modules
 import gi
@@ -11,9 +13,10 @@ import os
 import math
 
 class MediaAction(ActionBase):
-    CONTROLS_KEY_IMAGE = True
-    def __init__(self, deck_controller, page, coords):
-        super().__init__(deck_controller=deck_controller, page=page, coords=coords)
+    def __init__(self, action_id: str, action_name: str,
+                 deck_controller: "DeckController", page: Page, coords: str, plugin_base: PluginBase):
+        super().__init__(action_id=action_id, action_name=action_name,
+            deck_controller=deck_controller, page=page, coords=coords, plugin_base=plugin_base)
 
         self.current_status = None
         
@@ -29,12 +32,12 @@ class MediaAction(ActionBase):
     def get_config_rows(self) -> "list[Adw.PreferencesRow]":
         # Init ui elements
         self.player_model = Gtk.StringList()
-        self.player_selector = Adw.ComboRow(model=self.player_model, title="Bind to player:", subtitle="Specify the player to controll")
+        self.player_selector = Adw.ComboRow(model=self.player_model, title=self.plugin_base.lm.get("actions.media-action.bind-to-player.label"), subtitle=self.plugin_base.lm.get("actions.media-action.bind-to-player.subtitle"))
         self.player_selector.set_enable_search(True) #TODO: Implement
 
 
-        self.label_toggle = Adw.SwitchRow(title="Show name of playing song", subtitle="Show the name of the currently playing song")
-        self.thumbnail_toggle = Adw.SwitchRow(title="Show thumbnail of playing song", subtitle="Show the thumbnail of the currently playing song")
+        self.label_toggle = Adw.SwitchRow(title=self.plugin_base.lm.get("actions.media-action.show-name-switch.label"), subtitle=self.plugin_base.lm.get("actions.media-action.show-name-switch.subtitle"))
+        self.thumbnail_toggle = Adw.SwitchRow(title=self.plugin_base.lm.get("actions.media-action.show-thumbnail-switch.label"), subtitle=self.plugin_base.lm.get("actions.media-action.show-thumbnail-switch.subtitle"))
 
         self.load_config_defaults()
 
@@ -63,9 +66,9 @@ class MediaAction(ActionBase):
         for i in range(self.player_model.get_n_items()):
             self.player_model.remove(0)
 
-        players = self.PLUGIN_BASE.mc.get_player_names(remove_duplicates=True)
+        players = self.plugin_base.mc.get_player_names(remove_duplicates=True)
 
-        self.player_model.append("All Players")
+        self.player_model.append(self.plugin_base.lm.get("actions.media-action-bind-to-player.all-players"))
 
         for player in players:
             self.player_model.append(player)
@@ -88,7 +91,7 @@ class MediaAction(ActionBase):
     
     def on_change_player(self, combo, *args):
         settings = self.get_settings()
-        if combo.get_selected_item().get_string() == "All Players":
+        if combo.get_selected_item().get_string() == self.plugin_base.lm.get("actions.media-action-bind-to-player.all-players"):
             del settings["player_name"]
         else:
             settings["player_name"] = combo.get_selected_item().get_string()
@@ -102,7 +105,7 @@ class MediaAction(ActionBase):
     def show_title(self, reload_key = True) -> bool:
         if self.get_settings() == None:
             return False
-        title = self.PLUGIN_BASE.mc.title(self.get_player_name())
+        title = self.plugin_base.mc.title(self.get_player_name())
         if self.get_settings().setdefault("show_label", True) and title is not None:
             label = None
             if isinstance(title, list):
