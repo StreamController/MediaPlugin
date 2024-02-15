@@ -207,7 +207,7 @@ class Info(MediaAction):
     def get_config_rows(self):
         super_rows =  super().get_config_rows()
         super_rows.pop(1) # Remove label toggle row
-        self.seperator_text_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.info.seperator.text"))gi
+        self.seperator_text_entry = Adw.EntryRow(title=self.plugin_base.lm.get("actions.info.seperator.text"))
 
         self.load_own_config_defaults()
 
