@@ -8,6 +8,8 @@ class MediaController:
     def __init__(self):
         self.session_bus = dbus.SessionBus()
 
+        self.update_players()
+
     def update_players(self):
         mpris_players = []
         for i in self.session_bus.list_names():

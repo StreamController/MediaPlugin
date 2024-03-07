@@ -116,10 +116,10 @@ class MediaAction(ActionBase):
                 if len(title) > 0:
                     label = title
                     # margins = [5, 0, 5, 10]
-            self.set_bottom_label(self.shorten_label(label, 10), font_size=12, reload=reload_key)
+            self.set_bottom_label(self.shorten_label(label, 10), font_size=12, update=reload_key)
             return True
         else:
-            self.set_bottom_label(None, reload=reload_key)
+            self.set_bottom_label(None, update=reload_key)
             return False
 
     

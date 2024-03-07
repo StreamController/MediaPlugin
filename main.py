@@ -94,7 +94,7 @@ class PlayPause(MediaAction):
         
         image = self.generate_image(background=thumbnail, icon=image, icon_margins=margins)
 
-        self.set_key(image=image)
+        self.set_media(image=image)
 
 class Next(MediaAction):
     def __init__(self, action_id: str, action_name: str,
@@ -129,7 +129,7 @@ class Next(MediaAction):
 
         image = self.generate_image(background=thumbnail, icon=image, icon_margins=new_margins)
 
-        self.set_key(image=image)     
+        self.set_media(image=image)     
 
 class Previous(MediaAction):
     def __init__(self, action_id: str, action_name: str,
@@ -164,7 +164,7 @@ class Previous(MediaAction):
 
         image = self.generate_image(background=thumbnail, icon=image, icon_margins=new_margins)
 
-        self.set_key(image=image) 
+        self.set_media(image=image) 
 
 class Info(MediaAction):
     def __init__(self, action_id: str, action_name: str,
@@ -202,7 +202,8 @@ class Info(MediaAction):
                 if not os.path.exists(thumbnail[0]):
                     return
                 thumbnail = Image.open(thumbnail[0])
-        self.set_key(image=thumbnail)
+                
+        self.set_media(image=thumbnail)
 
     def get_config_rows(self):
         super_rows =  super().get_config_rows()
@@ -270,10 +271,9 @@ class MediaPlugin(PluginBase):
         )
         self.add_action_holder(self.info_holder)
 
-
         self.register(
             plugin_name=self.lm.get("plugin.name"),
             github_repo="https://github.com/Core447/MediaPlugin",
-            plugin_version="0.1",
-            app_version="0.1.1-alpha"
+            plugin_version="1.0.0",
+            app_version="1.0.0-alpha"
         )
