@@ -87,7 +87,10 @@ class PlayPause(MediaAction):
                     return
                 if not os.path.exists(thumbnail[0]):
                     return
-                thumbnail = Image.open(thumbnail[0])
+                try:
+                    thumbnail = Image.open(thumbnail[0])
+                except:
+                    return
 
 
         image = Image.open(file[status])
@@ -125,8 +128,11 @@ class Next(MediaAction):
             if thumbnail == None:
                 thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
             elif isinstance(thumbnail, list):
-                thumbnail = Image.open(thumbnail[0])
-
+                try:
+                    thumbnail = Image.open(thumbnail[0])
+                except:
+                    return
+                
         image = self.generate_image(background=thumbnail, icon=image, icon_margins=new_margins)
 
         self.set_media(image=image)     
@@ -160,7 +166,10 @@ class Previous(MediaAction):
             if thumbnail == None:
                 thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
             elif isinstance(thumbnail, list):
-                thumbnail = Image.open(thumbnail[0])
+                try:
+                    thumbnail = Image.open(thumbnail[0])
+                except:
+                    return
 
         image = self.generate_image(background=thumbnail, icon=image, icon_margins=new_margins)
 
@@ -201,7 +210,10 @@ class Info(MediaAction):
                     return
                 if not os.path.exists(thumbnail[0]):
                     return
-                thumbnail = Image.open(thumbnail[0])
+                try:
+                    thumbnail = Image.open(thumbnail[0])
+                except:
+                    return
                 
         self.set_media(image=thumbnail)
 
