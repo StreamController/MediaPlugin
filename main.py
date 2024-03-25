@@ -203,9 +203,7 @@ class Info(MediaAction):
         thumbnail = None
         if self.get_settings().setdefault("show_thumbnail", True):
             thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
-            elif isinstance(thumbnail, list):
+            if isinstance(thumbnail, list):
                 if thumbnail[0] == None:
                     return
                 if not os.path.exists(thumbnail[0]):
