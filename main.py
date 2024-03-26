@@ -252,7 +252,7 @@ class MediaPlugin(PluginBase):
         self.play_pause_holder = ActionHolder(
             plugin_base=self,
             action_base=PlayPause,
-            action_id="dev_core447_MediaPlugin::PlayPause",
+            action_id="com_core447_MediaPlugin::PlayPause",
             action_name=self.lm.get("actions.play-pause.name")
         )
         self.add_action_holder(self.play_pause_holder)
@@ -260,7 +260,7 @@ class MediaPlugin(PluginBase):
         self.next_holder = ActionHolder(
             plugin_base=self,
             action_base=Next,
-            action_id="dev_core447_MediaPlugin::Next",
+            action_id="com_core447_MediaPlugin::Next",
             action_name=self.lm.get("actions.next.name")
         )
         self.add_action_holder(self.next_holder)
@@ -268,7 +268,7 @@ class MediaPlugin(PluginBase):
         self.previous_holder = ActionHolder(
             plugin_base=self,
             action_base=Previous,
-            action_id="dev_core447_MediaPlugin::Previous",
+            action_id="com_core447_MediaPlugin::Previous",
             action_name=self.lm.get("actions.previous.name")
         )
         self.add_action_holder(self.previous_holder)
@@ -276,7 +276,7 @@ class MediaPlugin(PluginBase):
         self.info_holder = ActionHolder(
             plugin_base=self,
             action_base=Info,
-            action_id="dev_core447_MediaPlugin::Info",
+            action_id="com_core447_MediaPlugin::Info",
             action_name=self.lm.get("actions.info.name")
         )
         self.add_action_holder(self.info_holder)
