@@ -69,7 +69,7 @@ class MediaController:
                 iface.Pause()
                 status.append(True)
             except dbus.exceptions.DBusException as e:
-                print(e)
+                log.error(e)
                 status.append(False)
         return self.compress_list(status)
 
@@ -91,7 +91,7 @@ class MediaController:
                 iface.Play()
                 status.append(True)
             except dbus.exceptions.DBusException as e:
-                print(e)
+                log.error(e)
                 status.append(False)
         return self.compress_list(status)
         
@@ -113,7 +113,7 @@ class MediaController:
                 iface.PlayPause()
                 status.append(True)
             except dbus.exceptions.DBusException as e:
-                print(e)
+                log.error(e)
                 status.append(False)
         return self.compress_list(status)
         
@@ -135,7 +135,7 @@ class MediaController:
                 iface.Stop()
                 status.append(True)
             except dbus.exceptions.DBusException as e:
-                print(e)
+                log.error(e)
                 status.append(False)
         return self.compress_list(status)
 
@@ -157,7 +157,7 @@ class MediaController:
                 iface.Next()
                 status.append(True)
             except dbus.exceptions.DBusException as e:
-                print(e)
+                log.error(e)
                 status.append(False)
 
         return self.compress_list(status)
@@ -180,7 +180,7 @@ class MediaController:
                 iface.Previous()
                 status.append(True)
             except (KeyError, dbus.exceptions.DBusException) as e:
-                print(e)
+                log.error(e)
                 status.append(False)
 
         return self.compress_list(status)
@@ -193,7 +193,7 @@ class MediaController:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 status.append(str(properties.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus')))
             except (KeyError, dbus.exceptions.DBusException) as e:
-                print(e)
+                log.error(e)
                 status.append(None)
 
         return self.compress_list(status)
@@ -207,7 +207,7 @@ class MediaController:
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 titles.append(str(metadata['xesam:title']))
             except (KeyError, dbus.exceptions.DBusException) as e:
-                print(e)
+                log.error(e)
                 titles.append(None)
 
         return self.compress_list(titles)
@@ -221,7 +221,7 @@ class MediaController:
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 titles.append(str(metadata['xesam:artist'][0]))
             except (KeyError, dbus.exceptions.DBusException) as e:
-                print(e)
+                log.error(e)
                 titles.append(None)
 
         return self.compress_list(titles)
@@ -237,7 +237,7 @@ class MediaController:
                 path = path.replace("file://", "")
                 thumbnails.append(path)
             except (dbus.exceptions.DBusException, KeyError) as e:
-                print(e)
+                log.error(e)
                 thumbnails.append(None)
 
         return self.compress_list(thumbnails)
