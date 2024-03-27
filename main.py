@@ -71,7 +71,7 @@ class PlayPause(MediaAction):
             image = Image.open(file_path)
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.25)
-            self.set_key(image=image, margins=margins)
+            self.set_media(image=image, size=0.75, valign=-1)
             return
 
         self.current_status = status
