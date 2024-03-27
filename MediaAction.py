@@ -141,9 +141,12 @@ class MediaAction(ActionBase):
         settings["show_thumbnail"] = switch.get_active()
         self.set_settings(settings)
 
-    def generate_image(self, icon:Image = None, icon_margins=[0, 0, 0, 0], background:Image=None):
+    def generate_image(self, icon:Image.Image = None, icon_margins=[0, 0, 0, 0], background:Image.Image=None):
         if background is None:
             background = Image.new("RGBA", (self.deck_controller.deck.key_image_format()["size"]), (0, 0, 0, 0))
+        else:
+            background = background.resize(self.deck_controller.deck.key_image_format()["size"])
+        
 
         if icon is not None:
             # Resize
