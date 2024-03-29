@@ -122,8 +122,6 @@ class MediaAction(ActionBase):
             self.set_bottom_label(None, update=reload_key)
             return False
 
-    
-
     def shorten_label(self, label, length):
         if label is None:
             return
@@ -135,29 +133,30 @@ class MediaAction(ActionBase):
         settings = self.get_settings()
         settings["show_label"] = switch.get_active()
         self.set_settings(settings)
+        # Update image
+        self.on_tick()
 
     def on_toggle_thumbnail(self, switch, *args):
         settings = self.get_settings()
         settings["show_thumbnail"] = switch.get_active()
         self.set_settings(settings)
+        # Update image
+        self.on_tick()
 
-    def generate_image(self, icon:Image.Image = None, icon_margins=[0, 0, 0, 0], background:Image.Image=None):
+    def generate_image(self, icon:Image.Image = None, background:Image.Image=None, valign: float = 0, halign: float = 0, size: float = 1):
         if background is None:
             background = Image.new("RGBA", (self.deck_controller.deck.key_image_format()["size"]), (0, 0, 0, 0))
         else:
             background = background.resize(self.deck_controller.deck.key_image_format()["size"])
         
-
         if icon is not None:
             # Resize
-            icon_height = math.floor(self.deck_controller.deck.key_image_format()["size"][1]-icon_margins[1]-icon_margins[3])
-            icon_width = math.floor(self.deck_controller.deck.key_image_format()["size"][0]-icon_margins[0]-icon_margins[2])
+            lenght = int(self.deck_controller.deck.key_image_format()["size"][0] * size)
+            icon = icon.resize((lenght, lenght))
 
-            icon = icon.resize((icon_width, icon_height), Image.Resampling.LANCZOS)
+        left_margin = int((background.width - icon.width) * (halign + 1) / 2)
+        top_margin = int((background.height - icon.height) * (valign + 1) / 2)
 
-            x_pos = math.floor((background.width - icon_width)/2)
-            y_pos = math.floor((background.height - icon_height)/2)
-
-            background.paste(icon, (x_pos - icon_margins[1], y_pos - icon_margins[0]), icon)
+        background.paste(icon, (left_margin, top_margin), icon)
 
         return background

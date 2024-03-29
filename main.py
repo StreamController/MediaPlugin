@@ -29,8 +29,6 @@ class PlayPause(MediaAction):
         super().__init__(action_id=action_id, action_name=action_name,
             deck_controller=deck_controller, page=page, coords=coords, plugin_base=plugin_base)
 
-        self.update_image()
-        
     def on_key_down(self):
         status = self.plugin_base.mc.status(self.get_player_name())
         if status is None:
@@ -47,6 +45,9 @@ class PlayPause(MediaAction):
     def on_tick(self):
         self.update_image()
 
+    def on_ready(self):
+        self.update_image()
+
     def update_image(self):
         if self.get_settings() == None:
             # Page not yet fully loaded
@@ -59,10 +60,13 @@ class PlayPause(MediaAction):
             "Playing": os.path.join(self.plugin_base.PATH, "assets", "pause.png"),
             "Paused": os.path.join(self.plugin_base.PATH, "assets", "play.png"),
         }
-        if isinstance(status, list):
-            return
         
-        margins = [5, 0, 5, 10] if self.show_title() else [0, 0, 0, 0]  
+        if self.show_title():
+            size = 0.75
+            valign = -1
+        else:
+            size = 1
+            valign = 0
         
         if status == None:
             if self.current_status == None:
@@ -70,8 +74,8 @@ class PlayPause(MediaAction):
             file_path = file[self.current_status]
             image = Image.open(file_path)
             enhancer = ImageEnhance.Brightness(image)
-            image = enhancer.enhance(0.25)
-            self.set_media(image=image, size=0.75, valign=-1)
+            image = enhancer.enhance(0.6)
+            self.set_media(image=image, size=size, valign=valign)
             return
 
         self.current_status = status
@@ -95,7 +99,7 @@ class PlayPause(MediaAction):
 
         image = Image.open(file[status])
         
-        image = self.generate_image(background=thumbnail, icon=image, icon_margins=margins)
+        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
 
         self.set_media(image=image)
 
@@ -115,10 +119,22 @@ class Next(MediaAction):
         self.update_image()
 
     def update_image(self):
-        has_title = self.show_title()
-        new_margins = [5, 0, 5, 10] if has_title else [0, 0, 0, 0]
+        status = self.plugin_base.mc.status(self.get_player_name())
+        if isinstance(status, list):
+            status = status[0]
+
+        if self.show_title():
+            size = 0.75
+            valign = -1
+        else:
+            size = 1
+            valign = 0
 
         image = Image.open(os.path.join(self.plugin_base.PATH, "assets", "next.png"))
+        if status == None:
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(0.6)
+
         
         thumbnail = None
         if self.get_settings() is None:
@@ -133,7 +149,7 @@ class Next(MediaAction):
                 except:
                     return
                 
-        image = self.generate_image(background=thumbnail, icon=image, icon_margins=new_margins)
+        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
 
         self.set_media(image=image)     
 
@@ -153,10 +169,21 @@ class Previous(MediaAction):
         self.update_image()
 
     def update_image(self):
-        has_title = self.show_title()
-        new_margins = [5, 0, 5, 10] if has_title else [0, 0, 0, 0]
+        status = self.plugin_base.mc.status(self.get_player_name())
+        if isinstance(status, list):
+            status = status[0]
+
+        if self.show_title():
+            size = 0.75
+            valign = -1
+        else:
+            size = 1
+            valign = 0
 
         image = Image.open(os.path.join(self.plugin_base.PATH, "assets", "previous.png"))
+        if status == None:
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(0.6)
         
         thumbnail = None
         if self.get_settings() is None:
@@ -171,7 +198,7 @@ class Previous(MediaAction):
                 except:
                     return
 
-        image = self.generate_image(background=thumbnail, icon=image, icon_margins=new_margins)
+        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
 
         self.set_media(image=image) 
 
