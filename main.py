@@ -314,3 +314,5 @@ class MediaPlugin(PluginBase):
             plugin_version="1.0.0",
             app_version="1.0.0-alpha"
         )
+
+        self.request_dbus_permission("org.mpris.MediaPlayer2.*")
