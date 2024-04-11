@@ -1,6 +1,12 @@
+from functools import lru_cache
 from itertools import groupby
 import dbus
 import sys
+import os
+import globals as gl
+
+from urllib.parse import urlparse
+import requests
 
 from loguru import logger as log
 
@@ -234,6 +240,8 @@ class MediaController:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 path = str(metadata['mpris:artUrl'])
+                if path.startswith("https"):
+                    path = self.get_web_thumnail(path)
                 path = path.replace("file://", "")
                 thumbnails.append(path)
             except (dbus.exceptions.DBusException, KeyError, IndexError) as e:
@@ -253,3 +261,55 @@ class MediaController:
         if all_equal(list):
             return [list[0]]
         return list
+    
+    @lru_cache
+    def get_web_thumnail(self, url: str) -> str:
+        path = os.path.join(gl.DATA_PATH, "com_core447_MediaPlugin", "cache")
+        # Download image
+        return self.download_file(url, path)
+
+    def get_file_name_from_url(self, url: str):
+        """
+        Extracts the file name from a given URL.
+
+        Args:
+            url (str): The URL from which to extract the file name.
+
+        Returns:
+            str: The file name extracted from the URL.
+        """
+        # Parse the url to extract the path
+        parsed_url = urlparse(url)
+        # Extract the file name from the path
+        return os.path.basename(parsed_url.path)
+
+    def download_file(self, url: str, path: str = "", file_name: str = None) -> str:
+        """
+        Downloads a file from the specified URL and saves it to the specified path.
+
+        Args:
+            url (str): The URL of the file to be downloaded.
+            path (str): The path of the directory where the file will be saved. If a directory is provided, the filename will be extracted from the URL and appended to the path.
+
+        Returns:
+            path (str): The path of the downloaded file.
+        """
+
+        response = requests.get(url, stream=True)
+        
+        if file_name is None:
+            file_name = self.get_file_name_from_url(url)
+
+        file_name = os.path.splitext(file_name)[0]
+        _, extension = response.headers["content-type"].split("/")
+        file_name += f".{extension}"
+
+        path = os.path.join(path, file_name)
+
+        if os.path.dirname(path) != "":
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        with open(path, "wb") as f:
+            f.write(requests.get(url).content)
+
+        return path

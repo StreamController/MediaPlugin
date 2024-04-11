@@ -1,3 +1,4 @@
+import shutil
 from src.backend.PluginManager.ActionBase import ActionBase
 from src.backend.PluginManager.ActionHolder import ActionHolder
 from src.backend.PluginManager.PluginBase import PluginBase
@@ -16,6 +17,8 @@ import os
 from loguru import logger as log
 from PIL import Image, ImageEnhance
 import math
+
+import globals as gl
 
 # Add plugin to sys.paths
 sys.path.append(os.path.dirname(__file__))
@@ -275,6 +278,8 @@ class MediaPlugin(PluginBase):
         self.mc = MediaController()
         self.lm = self.locale_manager
         self.lm.set_to_os_default()
+
+        shutil.rmtree(os.path.join(gl.DATA_PATH, "com_core447_MediaPlugin", "cache"), ignore_errors=True)
 
         self.play_pause_holder = ActionHolder(
             plugin_base=self,
