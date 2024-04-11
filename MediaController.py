@@ -179,7 +179,7 @@ class MediaController:
             try:
                 iface.Previous()
                 status.append(True)
-            except (KeyError, dbus.exceptions.DBusException) as e:
+            except (KeyError, IndexError, dbus.exceptions.DBusException) as e:
                 log.error(e)
                 status.append(False)
 
@@ -192,7 +192,7 @@ class MediaController:
             try:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 status.append(str(properties.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus')))
-            except (KeyError, dbus.exceptions.DBusException) as e:
+            except (KeyError, IndexError, dbus.exceptions.DBusException) as e:
                 log.error(e)
                 status.append(None)
 
@@ -206,7 +206,7 @@ class MediaController:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 titles.append(str(metadata['xesam:title']))
-            except (KeyError, dbus.exceptions.DBusException) as e:
+            except (KeyError, IndexError, dbus.exceptions.DBusException) as e:
                 log.error(e)
                 titles.append(None)
 
@@ -220,7 +220,7 @@ class MediaController:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 titles.append(str(metadata['xesam:artist'][0]))
-            except (KeyError, dbus.exceptions.DBusException) as e:
+            except (KeyError, IndexError, dbus.exceptions.DBusException) as e:
                 log.error(e)
                 titles.append(None)
 
@@ -236,7 +236,7 @@ class MediaController:
                 path = str(metadata['mpris:artUrl'])
                 path = path.replace("file://", "")
                 thumbnails.append(path)
-            except (dbus.exceptions.DBusException, KeyError) as e:
+            except (dbus.exceptions.DBusException, KeyError, IndexError) as e:
                 log.error(e)
                 thumbnails.append(None)
 
