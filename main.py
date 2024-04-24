@@ -230,10 +230,13 @@ class Info(MediaAction):
         self.set_center_label(self.get_settings().get("seperator_text", "--"), font_size=12)
         self.set_bottom_label(artist, font_size=12)
 
+        ## Thumbnail
         thumbnail = None
         if self.get_settings().setdefault("show_thumbnail", True):
             thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if isinstance(thumbnail, list):
+            if thumbnail == None:
+                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
+            elif isinstance(thumbnail, list):
                 if thumbnail[0] == None:
                     return
                 if not os.path.exists(thumbnail[0]):
