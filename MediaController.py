@@ -239,7 +239,10 @@ class MediaController:
             try:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
-                path = str(metadata['mpris:artUrl'])
+                path = str(metadata.get('mpris:artUrl'))
+                if path in [None, ""]:
+                    thumbnails.append(None)
+                    continue
                 if path.startswith("https"):
                     path = self.get_web_thumnail(path)
                 path = path.replace("file://", "")
