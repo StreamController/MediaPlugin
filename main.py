@@ -27,10 +27,8 @@ from MediaController import MediaController
 from MediaAction import MediaAction
 
 class PlayPause(MediaAction):
-    def __init__(self, action_id: str, action_name: str,
-                 deck_controller: "DeckController", page: Page, coords: str, plugin_base: PluginBase):
-        super().__init__(action_id=action_id, action_name=action_name,
-            deck_controller=deck_controller, page=page, coords=coords, plugin_base=plugin_base)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def on_key_down(self):
         status = self.plugin_base.mc.status(self.get_player_name())
@@ -107,10 +105,8 @@ class PlayPause(MediaAction):
         self.set_media(image=image)
 
 class Next(MediaAction):
-    def __init__(self, action_id: str, action_name: str,
-                 deck_controller: "DeckController", page: Page, coords: str, plugin_base: PluginBase):
-        super().__init__(action_id=action_id, action_name=action_name,
-            deck_controller=deck_controller, page=page, coords=coords, plugin_base=plugin_base)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def on_ready(self):
         self.update_image()
@@ -157,10 +153,8 @@ class Next(MediaAction):
         self.set_media(image=image)     
 
 class Previous(MediaAction):
-    def __init__(self, action_id: str, action_name: str,
-                 deck_controller: "DeckController", page: Page, coords: str, plugin_base: PluginBase):
-        super().__init__(action_id=action_id, action_name=action_name,
-            deck_controller=deck_controller, page=page, coords=coords, plugin_base=plugin_base)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def on_ready(self):
         self.update_image()
@@ -206,10 +200,8 @@ class Previous(MediaAction):
         self.set_media(image=image) 
 
 class Info(MediaAction):
-    def __init__(self, action_id: str, action_name: str,
-                 deck_controller: "DeckController", page: Page, coords: str, plugin_base: PluginBase):
-        super().__init__(action_id=action_id, action_name=action_name,
-            deck_controller=deck_controller, page=page, coords=coords, plugin_base=plugin_base)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def on_tick(self):
         self.update_image()
