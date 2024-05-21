@@ -4,6 +4,7 @@
     "actions.next.name": "Next",
     "actions.previous.name": "Previous",
     "actions.info.name": "Info",
+    "actions.thumbnail.name": "Thumbnail",
     "actions.media-action.bind-to-player.label": "Bind to player",
     "actions.media-action.bind-to-player.subtitle": "Specify the player to control",
     "actions.media-action.show-name-switch.label": "Show name of the playing song",

@@ -3,7 +3,7 @@ from src.backend.PluginManager.ActionBase import ActionBase
 from src.backend.PluginManager.ActionHolder import ActionHolder
 from src.backend.PluginManager.PluginBase import PluginBase
 
-from src.backend.DeckManagement.DeckController import DeckController
+from src.backend.DeckManagement.DeckController import BackgroundImage, DeckController
 from src.backend.PageManagement.Page import Page
 
 # Import gtk modules
@@ -267,6 +267,70 @@ class Info(MediaAction):
         # Update image
         self.set_center_label(self.get_settings().get("seperator_text", "--"), font_size=12)
 
+
+
+class ThumbnailBackground(MediaAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.title: str = None
+        self.artist: str = None
+
+    def on_ready(self):
+        self.title = None
+        self.artist = None
+
+    def on_tick(self):
+        self.update_image()
+
+    def update_image(self):
+        title = self.plugin_base.mc.title(self.get_player_name())
+        artist = self.plugin_base.mc.artist(self.get_player_name())
+
+        if self.title == title and self.artist == artist:
+            return
+        
+        self.title = title
+        self.artist = artist
+
+        if title is not None:
+            title = self.shorten_label(title[0], 10)
+        if title is not None:
+            artist = self.shorten_label(artist[0], 10)
+
+        if self.get_settings() is None:
+            return
+
+        ## Thumbnail
+        thumbnail = None
+        if self.get_settings().setdefault("show_thumbnail", True):
+            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
+            if thumbnail == None:
+                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
+            elif isinstance(thumbnail, list):
+                if thumbnail[0] == None:
+                    return
+                if not os.path.exists(thumbnail[0]):
+                    return
+                try:
+                    thumbnail = Image.open(thumbnail[0])
+                except:
+                    return
+                
+        if thumbnail is None:
+            self.deck_controller.background.set_image(
+                image=None,
+                update=True
+            )
+        else:    
+            self.deck_controller.background.set_image(
+                image=BackgroundImage(
+                    self.deck_controller,
+                    image=thumbnail,
+                ),
+                update=True
+            )
+
 class MediaPlugin(PluginBase):
     def __init__(self):
         super().__init__()
@@ -307,6 +371,14 @@ class MediaPlugin(PluginBase):
             action_name=self.lm.get("actions.info.name")
         )
         self.add_action_holder(self.info_holder)
+
+        self.thumbnail_holder = ActionHolder(
+            plugin_base=self,
+            action_base=ThumbnailBackground,
+            action_id="com_core447_MediaPlugin::Thumbnail",
+            action_name=self.lm.get("actions.thumbnail.name")
+        )
+        self.add_action_holder(self.thumbnail_holder)
 
         self.register(
             plugin_name=self.lm.get("plugin.name"),
