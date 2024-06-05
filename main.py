@@ -284,44 +284,23 @@ class ThumbnailBackground(MediaAction):
         self.update_image()
 
     def update_image(self):
-        title = self.plugin_base.mc.title(self.get_player_name())
-        artist = self.plugin_base.mc.artist(self.get_player_name())
-
-        if self.title == title and self.artist == artist:
+        if not self.get_is_present():
             return
         
-        self.title = title
-        self.artist = artist
-
-        if title is not None:
-            title = self.shorten_label(title[0], 10)
-        if title is not None:
-            artist = self.shorten_label(artist[0], 10)
-
-        if self.get_settings() is None:
-            return
-
         ## Thumbnail
-        thumbnail = None
-        if self.get_settings().setdefault("show_thumbnail", True):
-            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
-            elif isinstance(thumbnail, list):
-                if thumbnail[0] == None:
-                    return
-                if not os.path.exists(thumbnail[0]):
-                    return
-                try:
-                    thumbnail = Image.open(thumbnail[0])
-                except:
-                    return
+        thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
+        if isinstance(thumbnail, list):
+            if thumbnail[0] is None:
+                thumbnail = None
+            if not os.path.exists(thumbnail[0]):
+                thumbnail = None
+            try:
+                thumbnail = Image.open(thumbnail[0])
+            except:
+                thumbnail = None
                 
         if thumbnail is None:
-            self.deck_controller.background.set_image(
-                image=None,
-                update=True
-            )
+            self.clear()
         else:    
             self.deck_controller.background.set_image(
                 image=BackgroundImage(
@@ -330,6 +309,21 @@ class ThumbnailBackground(MediaAction):
                 ),
                 update=True
             )
+
+    def clear(self):
+        if not self.get_is_present():
+            return
+        self.deck_controller.background.set_image(
+            image=None,
+            update=True
+        )
+
+    def on_removed_from_cache(self):
+        self.clear()
+
+    def on_remove(self) -> None:
+        self.clear()
+
 
 class MediaPlugin(PluginBase):
     def __init__(self):
