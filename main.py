@@ -2,6 +2,8 @@ import shutil
 from src.backend.PluginManager.ActionBase import ActionBase
 from src.backend.PluginManager.ActionHolder import ActionHolder
 from src.backend.PluginManager.PluginBase import PluginBase
+from src.backend.DeckManagement.InputIdentifier import Input
+from src.backend.PluginManager.ActionInputSupport import ActionInputSupport
 
 from src.backend.DeckManagement.DeckController import BackgroundImage, DeckController
 from src.backend.PageManagement.Page import Page
@@ -337,40 +339,65 @@ class MediaPlugin(PluginBase):
         self.play_pause_holder = ActionHolder(
             plugin_base=self,
             action_base=PlayPause,
-            action_id="com_core447_MediaPlugin::PlayPause",
-            action_name=self.lm.get("actions.play-pause.name")
+            action_id_suffix="PlayPause",
+            action_name=self.lm.get("actions.play-pause.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNTESTED
+            }
         )
         self.add_action_holder(self.play_pause_holder)
 
         self.next_holder = ActionHolder(
             plugin_base=self,
             action_base=Next,
-            action_id="com_core447_MediaPlugin::Next",
-            action_name=self.lm.get("actions.next.name")
+            action_id_suffix="Next",
+            action_name=self.lm.get("actions.next.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNTESTED
+            }
         )
         self.add_action_holder(self.next_holder)
 
         self.previous_holder = ActionHolder(
             plugin_base=self,
             action_base=Previous,
-            action_id="com_core447_MediaPlugin::Previous",
-            action_name=self.lm.get("actions.previous.name")
+            action_id_suffix="Previous",
+            action_name=self.lm.get("actions.previous.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNTESTED
+            }
         )
         self.add_action_holder(self.previous_holder)
 
         self.info_holder = ActionHolder(
             plugin_base=self,
             action_base=Info,
-            action_id="com_core447_MediaPlugin::Info",
-            action_name=self.lm.get("actions.info.name")
+            action_id_suffix="Info",
+            action_name=self.lm.get("actions.info.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNSUPPORTED
+            }
         )
         self.add_action_holder(self.info_holder)
 
         self.thumbnail_holder = ActionHolder(
             plugin_base=self,
             action_base=ThumbnailBackground,
-            action_id="com_core447_MediaPlugin::Thumbnail",
-            action_name=self.lm.get("actions.thumbnail.name")
+            action_id_suffix="Thumbnail",
+            action_name=self.lm.get("actions.thumbnail.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNSUPPORTED
+            }
         )
         self.add_action_holder(self.thumbnail_holder)
 
