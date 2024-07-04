@@ -253,17 +253,27 @@ class MediaController:
 
         return self.compress_list(thumbnails)
 
-    def compress_list(self, list) -> list | bool:
-        def all_equal(iterable):
-            g = groupby(iterable)
-            return next(g, True) and not next(g, False)
-        
-        if len(list) == 0:
+    def compress_list(self, _list) -> list | bool:
+        if len(_list) == 0:
             return None
         
-        if all_equal(list):
-            return [list[0]]
-        return list
+        def all_equal(iterable):
+            if len(set(iterable)) == 0:
+                return True
+            
+            first_element = iterable[0]
+            first_element_occurrences = 0
+            for element in iterable:
+                if element == first_element:
+                    first_element_occurrences += 1
+
+            return first_element_occurrences == len(iterable)
+        
+        
+        if all_equal(_list):
+            return [_list[0]]
+        
+        return _list
     
     @lru_cache
     def get_web_thumnail(self, url: str) -> str:

@@ -220,9 +220,9 @@ class Info(MediaAction):
         if self.get_settings() is None:
             return
 
-        self.set_top_label(title, font_size=12)
+        self.set_top_label(str(title), font_size=12)
         self.set_center_label(self.get_settings().get("seperator_text", "--"), font_size=12)
-        self.set_bottom_label(artist, font_size=12)
+        self.set_bottom_label(str(artist), font_size=12)
 
         ## Thumbnail
         thumbnail = None
