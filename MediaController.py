@@ -185,7 +185,9 @@ class MediaController:
             try:
                 iface.Previous()
                 status.append(True)
-            except (KeyError, IndexError, dbus.exceptions.DBusException) as e:
+            except (KeyError, IndexError) as e:
+                status.append(False)
+            except dbus.exceptions.DBusException as e:
                 log.error(e)
                 status.append(False)
 
@@ -198,7 +200,9 @@ class MediaController:
             try:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 status.append(str(properties.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus')))
-            except (KeyError, IndexError, dbus.exceptions.DBusException) as e:
+            except (KeyError, IndexError) as e:
+                status.append(None)
+            except dbus.exceptions.DBusException as e:
                 log.error(e)
                 status.append(None)
 
@@ -212,7 +216,9 @@ class MediaController:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 titles.append(str(metadata['xesam:title']))
-            except (KeyError, IndexError, dbus.exceptions.DBusException) as e:
+            except (KeyError, IndexError) as e:
+                titles.append(None)
+            except dbus.exceptions.DBusException as e:
                 log.error(e)
                 titles.append(None)
 
@@ -226,7 +232,9 @@ class MediaController:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
                 titles.append(str(metadata['xesam:artist'][0]))
-            except (KeyError, IndexError, dbus.exceptions.DBusException) as e:
+            except (KeyError, IndexError) as e:
+                titles.append(None)
+            except dbus.exceptions.DBusException as e:
                 log.error(e)
                 titles.append(None)
 
@@ -247,9 +255,11 @@ class MediaController:
                     path = self.get_web_thumnail(path)
                 path = path.replace("file://", "")
                 thumbnails.append(path)
-            except (dbus.exceptions.DBusException, KeyError, IndexError) as e:
-                log.error(e)
+            except (KeyError, IndexError) as e:
                 thumbnails.append(None)
+            except dbus.exceptions.DBusException as e:
+                log.error(e)
+                thumbnails.append(None)            
 
         return self.compress_list(thumbnails)
 
