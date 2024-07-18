@@ -211,6 +211,7 @@ class PlayPause(MediaAction):
         file = {
             "Playing": os.path.join(self.plugin_base.PATH, "assets", "pause.png"),
             "Paused": os.path.join(self.plugin_base.PATH, "assets", "play.png"),
+            "Stopped": os.path.join(self.plugin_base.PATH, "assets", "stop.png"), #play.png might make more sense
         }
         
         if self.show_title():
@@ -249,7 +250,7 @@ class PlayPause(MediaAction):
                     return
 
 
-        image = Image.open(file[status])
+        image = Image.open(file.get(status, file["Stopped"]))
         
         image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
 
