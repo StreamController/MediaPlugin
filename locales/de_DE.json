@@ -1,5 +1,7 @@
 {
     "plugin.name": "Medien",
+    "actions.play.name": "Play",
+    "actions.pause.name": "Pause",
     "actions.play-pause.name": "Play/Pause",
     "actions.next.name": "Nächster Titel",
     "actions.previous.name": "Vorheriger Titel",

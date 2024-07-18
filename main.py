@@ -28,6 +28,155 @@ sys.path.append(os.path.dirname(__file__))
 from MediaController import MediaController
 from MediaAction import MediaAction
 
+
+class Play(MediaAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def on_key_down(self):
+        status = self.plugin_base.mc.status(self.get_player_name())
+        if status is None or status[0] != "Playing":
+            self.plugin_base.mc.play(self.get_player_name())
+
+    def on_key_up(self):
+        pass
+
+    def on_tick(self):
+        self.update_image()
+
+    def on_ready(self):
+        self.update_image()
+
+    def update_image(self):
+        if self.get_settings() == None:
+            # Page not yet fully loaded
+            return
+        status = self.plugin_base.mc.status(self.get_player_name())
+        if isinstance(status, list):
+            status = status[0]
+
+        if self.show_title():
+            size = 0.75
+            valign = -1
+        else:
+            size = 1
+            valign = 0
+
+        icon_path = os.path.join(self.plugin_base.PATH, "assets", "play.png")
+        
+        if status == None:
+            if self.current_status == None:
+                self.current_status = "Playing"
+            image = Image.open(icon_path)
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(0.6)
+            self.set_media(image=image, size=size, valign=valign)
+            return
+
+        self.current_status = status
+
+        ## Thumbnail
+        thumbnail = None
+        if self.get_settings().setdefault("show_thumbnail", True):
+            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
+            if thumbnail == None:
+                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
+            elif isinstance(thumbnail, list):
+                if thumbnail[0] == None:
+                    return
+                if not os.path.exists(thumbnail[0]):
+                    return
+                try:
+                    thumbnail = Image.open(thumbnail[0])
+                except:
+                    return
+
+
+        image = Image.open(icon_path)
+
+        if status == "Playing":
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(0.6)
+        
+        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
+
+        self.set_media(image=image)
+
+
+class Pause(MediaAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def on_key_down(self):
+        status = self.plugin_base.mc.status(self.get_player_name())
+        if status is None or status[0] == "Playing":
+            self.plugin_base.mc.pause(self.get_player_name())
+
+    def on_key_up(self):
+        pass
+
+    def on_tick(self):
+        self.update_image()
+
+    def on_ready(self):
+        self.update_image()
+
+    def update_image(self):
+        if self.get_settings() == None:
+            # Page not yet fully loaded
+            return
+        status = self.plugin_base.mc.status(self.get_player_name())
+        if isinstance(status, list):
+            status = status[0]
+
+        if self.show_title():
+            size = 0.75
+            valign = -1
+        else:
+            size = 1
+            valign = 0
+
+        icon_path = os.path.join(self.plugin_base.PATH, "assets", "pause.png")
+        
+        if status == None:
+            if self.current_status == None:
+                self.current_status = "Playing"
+            image = Image.open(icon_path)
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(0.6)
+            self.set_media(image=image, size=size, valign=valign)
+            return
+
+        self.current_status = status
+
+        ## Thumbnail
+        thumbnail = None
+        if self.get_settings().setdefault("show_thumbnail", True):
+            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
+            if thumbnail == None:
+                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
+            elif isinstance(thumbnail, list):
+                if thumbnail[0] == None:
+                    return
+                if not os.path.exists(thumbnail[0]):
+                    return
+                try:
+                    thumbnail = Image.open(thumbnail[0])
+                except:
+                    return
+
+
+        image = Image.open(icon_path)
+
+        if status == "Paused":
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(0.6)
+        
+        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
+
+        self.set_media(image=image)
+
+
 class PlayPause(MediaAction):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -335,6 +484,32 @@ class MediaPlugin(PluginBase):
         self.lm.set_to_os_default()
 
         shutil.rmtree(os.path.join(gl.DATA_PATH, "com_core447_MediaPlugin", "cache"), ignore_errors=True)
+
+        self.play_holder = ActionHolder(
+            plugin_base=self,
+            action_base=Play,
+            action_id_suffix="Play",
+            action_name=self.lm.get("actions.play.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNTESTED
+            }
+        )
+        self.add_action_holder(self.play_holder)
+
+        self.pause_holder = ActionHolder(
+            plugin_base=self,
+            action_base=Pause,
+            action_id_suffix="Pause",
+            action_name=self.lm.get("actions.pause.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNTESTED
+            }
+        )
+        self.add_action_holder(self.pause_holder)
 
         self.play_pause_holder = ActionHolder(
             plugin_base=self,
