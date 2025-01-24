@@ -16,6 +16,7 @@ from gi.repository import Gtk, Adw
 
 import sys
 import os
+import io
 from loguru import logger as log
 from PIL import Image, ImageEnhance
 import math
@@ -84,7 +85,9 @@ class Play(MediaAction):
             elif isinstance(thumbnail, list):
                 if thumbnail[0] == None:
                     return
-                if not os.path.exists(thumbnail[0]):
+                if isinstance(thumbnail[0], io.BytesIO):
+                    pass
+                elif not os.path.exists(thumbnail[0]):
                     return
                 try:
                     thumbnail = Image.open(thumbnail[0])
@@ -158,7 +161,9 @@ class Pause(MediaAction):
             elif isinstance(thumbnail, list):
                 if thumbnail[0] == None:
                     return
-                if not os.path.exists(thumbnail[0]):
+                if isinstance(thumbnail[0], io.BytesIO):
+                    pass
+                elif not os.path.exists(thumbnail[0]):
                     return
                 try:
                     thumbnail = Image.open(thumbnail[0])
@@ -242,7 +247,9 @@ class PlayPause(MediaAction):
             elif isinstance(thumbnail, list):
                 if thumbnail[0] == None:
                     return
-                if not os.path.exists(thumbnail[0]):
+                if isinstance(thumbnail[0], io.BytesIO):
+                    pass
+                elif not os.path.exists(thumbnail[0]):
                     return
                 try:
                     thumbnail = Image.open(thumbnail[0])
@@ -383,7 +390,9 @@ class Info(MediaAction):
             elif isinstance(thumbnail, list):
                 if thumbnail[0] == None:
                     return
-                if not os.path.exists(thumbnail[0]):
+                if isinstance(thumbnail[0], io.BytesIO):
+                    pass
+                elif not os.path.exists(thumbnail[0]):
                     return
                 try:
                     thumbnail = Image.open(thumbnail[0])
@@ -444,8 +453,10 @@ class ThumbnailBackground(MediaAction):
         if isinstance(thumbnail, list):
             if thumbnail[0] is None:
                 thumbnail = None
-            if not os.path.exists(thumbnail[0]):
-                thumbnail = None
+                if isinstance(thumbnail[0], io.BytesIO):
+                    pass
+                elif not os.path.exists(thumbnail[0]):
+                    return
             try:
                 thumbnail = Image.open(thumbnail[0])
             except:

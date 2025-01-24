@@ -3,6 +3,8 @@ from itertools import groupby
 import dbus
 import sys
 import os
+import io
+import base64
 import globals as gl
 
 from urllib.parse import urlparse
@@ -251,6 +253,13 @@ class MediaController:
                 if path in [None, ""]:
                     thumbnails.append(None)
                     continue
+                if path.startswith("data:"):
+                    header, data = path.split(',', 1)
+                    encoding = header.split(';')[1]
+                    if encoding == "base64":
+                        thumb = io.BytesIO(base64.b64decode(data))
+                        thumbnails.append(thumb)
+                        continue
                 if path.startswith("https"):
                     path = self.get_web_thumnail(path)
                 path = path.replace("file://", "")
