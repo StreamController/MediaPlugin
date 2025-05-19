@@ -20,20 +20,27 @@ class MediaController:
 
     def update_players(self):
         mpris_players = []
-        for i in self.session_bus.list_names():
-            if str(i)[:22] == "org.mpris.MediaPlayer2":
-                mpris_players += [self.session_bus.get_object(i, '/org/mpris/MediaPlayer2')]
+        try:
+            for i in self.session_bus.list_names():
+                if str(i)[:22] == "org.mpris.MediaPlayer2":
+                    mpris_players += [self.session_bus.get_object(i, '/org/mpris/MediaPlayer2')]
+        except Exception as e:
+            log.error("Could not connect to D-Bus session bus. Is the D-Bus daemon running?", e)
+            return
         self.mpris_players = mpris_players
 
     def get_player_names(self, remove_duplicates = False):
         names = []
-        for player in self.mpris_players:
-            properties = dbus.Interface(player, 'org.freedesktop.DBus.Properties')
-            name = properties.Get('org.mpris.MediaPlayer2', 'Identity')
-            if remove_duplicates:
-                if name in names:
-                    continue
-            names.append(str(name))
+        try:
+            for player in self.mpris_players:
+                properties = dbus.Interface(player, 'org.freedesktop.DBus.Properties')
+                name = properties.Get('org.mpris.MediaPlayer2', 'Identity')
+                if remove_duplicates:
+                    if name in names:
+                        continue
+                names.append(str(name))
+        except Exception as e:
+            log.error("Could not connect to D-Bus session bus. Is the D-Bus daemon running?", e)
         return names
     
     def get_matching_ifaces(self, player_name: str = None) -> list[dbus.Interface]:
