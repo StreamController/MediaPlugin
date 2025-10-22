@@ -453,10 +453,7 @@ class ThumbnailBackground(MediaAction):
         if isinstance(thumbnail, list):
             if thumbnail[0] is None:
                 thumbnail = None
-                if isinstance(thumbnail[0], io.BytesIO):
-                    pass
-                elif not os.path.exists(thumbnail[0]):
-                    return
+                return
             try:
                 thumbnail = Image.open(thumbnail[0])
             except:
