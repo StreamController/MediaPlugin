@@ -494,7 +494,7 @@ class ThumbnailBackground(MediaAction):
             index = self.size_mode_options.index(size_mode)
             self.size_mode_selector.set_selected(index)
         except ValueError:
-            self.size_mode_selector.set_selected(4)  # Default to stretch
+            self.size_mode_selector.set_selected(4)  # Default to legacy behaviour: Stretch
     
     def on_change_size_mode(self, combo, *args):
         settings = self.get_settings()
@@ -633,7 +633,6 @@ class ThumbnailBackground(MediaAction):
         
         # If background path has changed, invalidate cache
         if background_path != self.cached_background_path:
-            log.debug(f"[ThumbnailBackground] Background path changed from '{self.cached_background_path}' to '{background_path}', invalidating cache")
             self.original_background_image = None
             self.cached_background_path = None
         
@@ -647,7 +646,7 @@ class ThumbnailBackground(MediaAction):
         
         # Load background from file
         try:
-            # Handle videos with black background
+            # We only handle images here; videos/gifs default to black
             if background_path.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.gif')):
                 result = Image.new("RGBA", (full_width, full_height), (0, 0, 0, 255))
             else:
@@ -673,37 +672,31 @@ class ThumbnailBackground(MediaAction):
         deck_bg = deck_settings.get("background", {})
         page_bg = self.deck_controller.active_page.dict.get("background", {})
         
-        log.debug(f"[ThumbnailBackground] Deck background: enable={deck_bg.get('enable', False)}, path={deck_bg.get('path', 'None')}")
-        log.debug(f"[ThumbnailBackground] Page background: overwrite={page_bg.get('overwrite', False)}, show={page_bg.get('show', False)}, path={page_bg.get('path', 'None')}")
-        
         # Priority order:
-        # 1. If page override is enabled:
-        #    - If show is enabled: use page background
-        #    - If show is disabled: use black (ignore deck background)
-        # 2. If page override is disabled:
-        #    - If deck enable is enabled: use deck background
-        #    - Otherwise: use black
-        
+        # 1. Page override enabled
+        #    - show enabled: use page background
+        #    - show disabled: use black background
+        # 2. Page override disabled
+        #    - deck enable enabled: use deck background
+        #    - deck enable disabled: use black background
+        # 3. No background configured: use black background
+                
         # Check if page is overriding
         if page_bg.get("overwrite", False):
             # Page is overriding - check if show is enabled
             if page_bg.get("show", False):
                 path = page_bg.get("path")
                 if path:
-                    log.debug(f"[ThumbnailBackground] Using page background: {path}")
                     return path
             # Page override with show disabled = use black
-            log.debug("[ThumbnailBackground] Page override enabled but show disabled, using black background")
             return None
         
         # Page not overriding - check deck background
         if deck_bg.get("enable", False):
             path = deck_bg.get("path")
             if path:
-                log.debug(f"[ThumbnailBackground] Using deck background: {path}")
                 return path
         
-        log.debug("[ThumbnailBackground] No background configured, using black background")
         return None
 
     def clear(self):
