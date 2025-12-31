@@ -437,11 +437,13 @@ class ThumbnailBackground(MediaAction):
         self.title: str = None
         self.artist: str = None
         self.original_background_image = None  # Cache the original background
+        self.cached_background_path = None  # Track which background is cached
 
     def on_ready(self):
         self.title = None
         self.artist = None
         self.original_background_image = None
+        self.cached_background_path = None
 
     def on_tick(self):
         self.update_image()
@@ -512,17 +514,17 @@ class ThumbnailBackground(MediaAction):
         
         size_mode = settings.setdefault("size_mode", "stretch")
         
-        ## Thumbnail
+        # Get thumbnail
         thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
         if isinstance(thumbnail, list):
             if thumbnail[0] is None:
-                thumbnail = None
                 self.clear()
                 return
             try:
                 thumbnail = Image.open(thumbnail[0])
             except:
-                thumbnail = None
+                self.clear()
+                return
                 
         if thumbnail is None:
             self.clear()
@@ -530,40 +532,33 @@ class ThumbnailBackground(MediaAction):
         
         # Handle different size modes
         if size_mode == "stretch":
-            # Stretch to fit entire deck, always starting at 0,0
-            key_rows, key_cols = self.deck_controller.deck.key_layout()
-            key_width, key_height = self.deck_controller.get_key_image_size()
-            spacing_x, spacing_y = self.deck_controller.key_spacing
-            
-            full_width = key_width * key_cols + spacing_x * (key_cols - 1)
-            full_height = key_height * key_rows + spacing_y * (key_rows - 1)
-            
-            # Resize thumbnail to exact deck dimensions
+            # Stretch to exact deck dimensions (may distort aspect ratio)
+            full_width, full_height, _, _, _, _ = self.get_deck_dimensions()
             stretched_thumbnail = thumbnail.resize((full_width, full_height), Image.LANCZOS)
-            
             self.deck_controller.background.set_image(
-            image=BackgroundImage(
-                self.deck_controller,
-                image=stretched_thumbnail,
-            ),
-            update=True
+                image=BackgroundImage(self.deck_controller, image=stretched_thumbnail),
+                update=True
             )
         elif size_mode == "fill":
-            # Scale to longest side, center on deck
             self.set_fill_screen_background(thumbnail)
         else:
             # Grid sizes (1x1, 2x2, 3x3, 4x4)
             self.set_grid_sized_background(thumbnail, size_mode)
 
-    def set_fill_screen_background(self, thumbnail: Image.Image):
-        """Scale thumbnail to fill the screen by its longest side, centered."""
-        # Get full deck image size
+    def get_deck_dimensions(self):
+        """Helper to get full deck dimensions."""
         key_rows, key_cols = self.deck_controller.deck.key_layout()
         key_width, key_height = self.deck_controller.get_key_image_size()
         spacing_x, spacing_y = self.deck_controller.key_spacing
         
         full_width = key_width * key_cols + spacing_x * (key_cols - 1)
         full_height = key_height * key_rows + spacing_y * (key_rows - 1)
+        
+        return full_width, full_height, key_width, key_height, spacing_x, spacing_y
+
+    def set_fill_screen_background(self, thumbnail: Image.Image):
+        """Scale thumbnail to fill the screen by its longest side, centered."""
+        full_width, full_height, _, _, _, _ = self.get_deck_dimensions()
         
         # Calculate scaling to fill by longest side
         thumb_width, thumb_height = thumbnail.size
@@ -572,155 +567,150 @@ class ThumbnailBackground(MediaAction):
         new_width = int(thumb_width * scale)
         new_height = int(thumb_height * scale)
         
-        # Resize thumbnail
+        # Resize and center thumbnail
         resized_thumbnail = thumbnail.resize((new_width, new_height), Image.LANCZOS)
-        
-        # Create a canvas of the full deck size
         canvas = Image.new("RGBA", (full_width, full_height), (0, 0, 0, 255))
         
-        # Center the thumbnail
         x_offset = (full_width - new_width) // 2
         y_offset = (full_height - new_height) // 2
-        
         canvas.paste(resized_thumbnail, (x_offset, y_offset))
         
         self.deck_controller.background.set_image(
-            image=BackgroundImage(
-                self.deck_controller,
-                image=canvas,
-            ),
+            image=BackgroundImage(self.deck_controller, image=canvas),
             update=True
         )
 
     def set_grid_sized_background(self, thumbnail: Image.Image, size_mode: str):
         """Place thumbnail at specific grid size overlaid on current background."""
         try:
-            # Parse size (e.g., "2x2" -> 2)
             grid_size = int(size_mode[0])
         except:
             # Fallback to stretch if parsing fails
             self.deck_controller.background.set_image(
-                image=BackgroundImage(
-                    self.deck_controller,
-                    image=thumbnail,
-                ),
+                image=BackgroundImage(self.deck_controller, image=thumbnail),
                 update=True
             )
             return
-        
-        # Get deck layout
-        key_rows, key_cols = self.deck_controller.deck.key_layout()
-        key_width, key_height = self.deck_controller.get_key_image_size()
-        spacing_x, spacing_y = self.deck_controller.key_spacing
         
         # Get action position
-        coords = None
-        if hasattr(self.input_ident, 'coords'):
-            coords = self.input_ident.coords  # (x, y) or (col, row)
-        
-        if coords is None:
-            # Fallback to stretch if we can't get position
+        if not hasattr(self.input_ident, 'coords'):
             self.deck_controller.background.set_image(
-                image=BackgroundImage(
-                    self.deck_controller,
-                    image=thumbnail,
-                ),
+                image=BackgroundImage(self.deck_controller, image=thumbnail),
                 update=True
             )
             return
         
-        col, row = coords
+        col, row = self.input_ident.coords
+        full_width, full_height, key_width, key_height, spacing_x, spacing_y = self.get_deck_dimensions()
         
-        # Calculate full deck size
-        full_width = key_width * key_cols + spacing_x * (key_cols - 1)
-        full_height = key_height * key_rows + spacing_y * (key_rows - 1)
-        
-        # Get the original page/deck background, not the one with previous thumbnails
+        # Get original background and calculate thumbnail dimensions
         background_canvas = self.get_original_background(full_width, full_height)
-        
-        # Calculate thumbnail size and position
         thumb_width = key_width * grid_size + spacing_x * (grid_size - 1)
         thumb_height = key_height * grid_size + spacing_y * (grid_size - 1)
         
-        # Resize thumbnail
+        # Resize and position thumbnail
         resized_thumbnail = thumbnail.resize((thumb_width, thumb_height), Image.LANCZOS)
-        
-        # Calculate position on deck (allow overflow)
         x_pos = col * (key_width + spacing_x)
         y_pos = row * (key_height + spacing_y)
         
-        # Paste thumbnail on background
         background_canvas.paste(resized_thumbnail, (x_pos, y_pos))
         
         self.deck_controller.background.set_image(
-            image=BackgroundImage(
-                self.deck_controller,
-                image=background_canvas,
-            ),
+            image=BackgroundImage(self.deck_controller, image=background_canvas),
             update=True
         )
     
     def get_original_background(self, full_width: int, full_height: int) -> Image.Image:
         """Get the original deck or page background without any thumbnail overlays."""
-        # If we have a cached original background, always use it
+        # Get the current background path
+        background_path = self.get_background_path()
+        
+        # If no background is configured, always return black (don't cache)
+        if not background_path or not os.path.isfile(background_path):
+            self.original_background_image = None  # Clear any cached background
+            self.cached_background_path = None
+            return Image.new("RGBA", (full_width, full_height), (0, 0, 0, 255))
+        
+        # If background path has changed, invalidate cache
+        if background_path != self.cached_background_path:
+            log.debug(f"[ThumbnailBackground] Background path changed from '{self.cached_background_path}' to '{background_path}', invalidating cache")
+            self.original_background_image = None
+            self.cached_background_path = None
+        
+        # Return cached background if available
         if self.original_background_image is not None:
             try:
                 return self.original_background_image.copy()
             except:
                 self.original_background_image = None
+                self.cached_background_path = None
         
-        # We don't have a cache yet, so we need to load the original background
-        # Get background settings from deck and page
-        deck_settings = self.deck_controller.get_deck_settings()
-        deck_background_settings = deck_settings.get("background", {})
-        page_background_settings = self.deck_controller.active_page.dict.get("settings", {}).get("background", {})
-        
-        # Determine which background to use (same logic as load_background in DeckController)
-        if deck_background_settings.get("enable", False) and not page_background_settings.get("overwrite", False):
-            config = deck_background_settings
-        elif page_background_settings.get("overwrite", False) and page_background_settings.get("show", False):
-            config = page_background_settings
-        else:
-            config = {}
-        
-        background_path = config.get("media-path")
-        
-        # Also check the old page.dict["background"] structure
-        if not background_path:
-            old_bg = self.deck_controller.active_page.dict.get("background", {})
-            background_path = old_bg.get("path")
-        
-        # Load the original background image if it exists
-        if background_path and os.path.isfile(background_path):
-            try:
-                # Check if it's a video (we'll just use black background for videos)
-                if background_path.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.gif')):
-                    result = Image.new("RGBA", (full_width, full_height), (0, 0, 0, 255))
-                    self.original_background_image = result.copy()
-                    return result
-                
-                # Load and resize the image to full deck size
+        # Load background from file
+        try:
+            # Handle videos with black background
+            if background_path.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm', '.gif')):
+                result = Image.new("RGBA", (full_width, full_height), (0, 0, 0, 255))
+            else:
+                # Load and fit image to deck size
                 with Image.open(background_path) as bg_image:
-                    # Use ImageOps.fit to preserve aspect ratio like BackgroundImage does
-                    fitted_bg = ImageOps.fit(bg_image.copy(), (full_width, full_height), Image.LANCZOS)
-                    # Convert to RGBA if needed
-                    if fitted_bg.mode != "RGBA":
-                        fitted_bg = fitted_bg.convert("RGBA")
-                    # Cache it for next time
-                    self.original_background_image = fitted_bg.copy()
-                    return fitted_bg
-            except Exception as e:
-                log.warning(f"Failed to load original background from {background_path}: {e}")
+                    result = ImageOps.fit(bg_image.copy(), (full_width, full_height), Image.LANCZOS)
+                    if result.mode != "RGBA":
+                        result = result.convert("RGBA")
+            
+            # Cache the result with its path
+            self.original_background_image = result.copy()
+            self.cached_background_path = background_path
+            return result
+        except Exception as e:
+            log.warning(f"Failed to load background from {background_path}: {e}")
+            self.original_background_image = None
+            self.cached_background_path = None
+            return Image.new("RGBA", (full_width, full_height), (0, 0, 0, 255))
+    
+    def get_background_path(self) -> str:
+        """Get the configured background path from deck or page settings."""
+        deck_settings = self.deck_controller.get_deck_settings()
+        deck_bg = deck_settings.get("background", {})
+        page_bg = self.deck_controller.active_page.dict.get("background", {})
         
-        # Fallback to black background
-        result = Image.new("RGBA", (full_width, full_height), (0, 0, 0, 255))
-        self.original_background_image = result.copy()
-        return result
+        log.debug(f"[ThumbnailBackground] Deck background: enable={deck_bg.get('enable', False)}, path={deck_bg.get('path', 'None')}")
+        log.debug(f"[ThumbnailBackground] Page background: overwrite={page_bg.get('overwrite', False)}, show={page_bg.get('show', False)}, path={page_bg.get('path', 'None')}")
+        
+        # Priority order:
+        # 1. If page override is enabled:
+        #    - If show is enabled: use page background
+        #    - If show is disabled: use black (ignore deck background)
+        # 2. If page override is disabled:
+        #    - If deck enable is enabled: use deck background
+        #    - Otherwise: use black
+        
+        # Check if page is overriding
+        if page_bg.get("overwrite", False):
+            # Page is overriding - check if show is enabled
+            if page_bg.get("show", False):
+                path = page_bg.get("path")
+                if path:
+                    log.debug(f"[ThumbnailBackground] Using page background: {path}")
+                    return path
+            # Page override with show disabled = use black
+            log.debug("[ThumbnailBackground] Page override enabled but show disabled, using black background")
+            return None
+        
+        # Page not overriding - check deck background
+        if deck_bg.get("enable", False):
+            path = deck_bg.get("path")
+            if path:
+                log.debug(f"[ThumbnailBackground] Using deck background: {path}")
+                return path
+        
+        log.debug("[ThumbnailBackground] No background configured, using black background")
+        return None
 
     def clear(self):
         if not self.get_is_present():
             return
         self.original_background_image = None  # Clear cache
+        self.cached_background_path = None
         self.deck_controller.background.set_image(
             image=None,
             update=True
