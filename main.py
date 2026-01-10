@@ -838,21 +838,21 @@ class ThumbnailBackground(MediaAction):
     def load_size_mode_default(self):
         """
         Load the default size mode setting and apply it to the size mode selector.
-        Load from actions settings, load and store ``"stretch"`` as the default,
-        If an invalid option is stored, fall back to the index for ``"stretch"``.
+        Load from actions settings, load and store ``"fill"`` as the default,
+        If an invalid option is stored, fall back to the index for ``"fill"``.
         """
         settings = self.get_settings()
         if settings is None:
             return
         
-        size_mode = settings.setdefault("size_mode", "stretch")
+        size_mode = settings.setdefault("size_mode", "fill")
         
         # Select the appropriate mode
         try:
             selected_index = self.size_mode_options.index(size_mode)
         except ValueError:
-            # Default to "stretch" if the stored mode is invalid
-            selected_index = self.size_mode_options.index("stretch")
+            # Default to "fill" if the stored mode is invalid
+            selected_index = self.size_mode_options.index("fill")
         
         self.size_mode_selector.set_selected(selected_index)
     
@@ -898,7 +898,7 @@ class ThumbnailBackground(MediaAction):
         if settings is None:
             return
         
-        size_mode = settings.setdefault("size_mode", "stretch")
+        size_mode = settings.setdefault("size_mode", "fill")
         self.last_size_mode = size_mode
         
         # Get thumbnail path using helper method
@@ -954,7 +954,7 @@ class ThumbnailBackground(MediaAction):
     def _initialize_caches(self) -> None:
         """Initialize tracking caches with current state."""
         settings = self.get_settings()
-        self.last_size_mode = settings.get("size_mode", "stretch") if settings else "stretch"
+        self.last_size_mode = settings.get("size_mode", "fill") if settings else "fill"
         self.last_thumbnail_path = self._get_thumbnail_path()
         self.last_background_path = self.get_background_path()
         self.last_coords = self.input_ident.coords if hasattr(self.input_ident, 'coords') else None  # type: ignore[attr-defined]
