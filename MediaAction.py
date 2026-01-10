@@ -11,9 +11,6 @@ from gi.repository import Gtk, Adw
 from PIL import Image, ImageEnhance
 import os
 import math
-import sys
-
-from loguru import logger as log
 
 class MediaAction(ActionBase):
     def __init__(self, *args, **kwargs):

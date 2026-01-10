@@ -1,5 +1,5 @@
 import shutil
-# Import internal modules
+from src.backend.PluginManager.ActionBase import ActionBase
 from src.backend.PluginManager.ActionHolder import ActionHolder
 from src.backend.PluginManager.PluginBase import PluginBase
 from src.backend.DeckManagement.InputIdentifier import Input
@@ -30,7 +30,6 @@ from log_wrapper import log, set_log_level
 
 from MediaController import MediaController
 from MediaAction import MediaAction
-
 
 
 class Play(MediaAction):
@@ -832,7 +831,7 @@ class ThumbnailBackground(MediaAction):
         self.load_size_mode_default()
         self.size_mode_selector.connect("notify::selected", self.on_change_size_mode)
         
-        rows.append(self.size_mode_selector)
+        rows.append(self.size_mode_selector)  # type: ignore[arg-type]
         return rows
     
     def load_size_mode_default(self):
