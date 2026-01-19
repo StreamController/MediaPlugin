@@ -13,5 +13,14 @@
     "actions.media-action.show-thumbnail-switch.label": "Bild des spielenden Titels anzeigen",
     "actions.media-action.show-thumbnail-switch.subtitle": "Den Titelbild des aktuell spielenden Titels anzeigen",
     "actions.media-action-bind-to-player.all-players": "Alle Spieler",
-    "actions.info.seperator.text": "Trenntext:"
+    "actions.info.seperator.text": "Trenntext:",
+    "actions.thumbnail-background.size-mode.label": "Miniaturbild-Größe",
+    "actions.thumbnail-background.size-mode.subtitle": "Größe des Miniaturbilds auf dem Deck festlegen",
+    "actions.thumbnail-background.size-mode.stretch": "Strecken um zu passen",
+    "actions.thumbnail-background.size-mode.fill": "Bildschirm füllen",
+    "settings.title": "Plugin-Einstellungen",
+    "settings.composite-timeout.label": "Composite-Timeout",
+    "settings.composite-timeout.subtitle": "Verzögerung vor dem Zusammensetzen von Miniaturbildern (ms)",
+    "settings.log-level.label": "Log-Ebene",
+    "settings.log-level.subtitle": "Kontrollen Sie die Ausführlichkeit der Plugin-Protokollierung"
 }
