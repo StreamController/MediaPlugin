@@ -269,6 +269,9 @@ class MediaController:
                         continue
                 if path.startswith("https"):
                     path = self.get_web_thumnail(path)
+                if not path:
+                    thumbnails.append(None)
+                    continue
                 path = path.replace("file://", "")
                 thumbnails.append(path)
             except (KeyError, IndexError) as e:
@@ -334,8 +337,12 @@ class MediaController:
             path (str): The path of the downloaded file.
         """
 
-        response = requests.get(url, stream=True)
-        
+        try:
+            response = requests.get(url, stream=True)
+        except requests.exceptions.RequestException as e:
+            log.error(f"An error occurred during the request: {e}")
+            return None
+
         if file_name is None:
             file_name = self.get_file_name_from_url(url)
 
@@ -349,6 +356,6 @@ class MediaController:
             os.makedirs(os.path.dirname(path), exist_ok=True)
 
         with open(path, "wb") as f:
-            f.write(requests.get(url).content)
+            f.write(response.content)
 
         return path
