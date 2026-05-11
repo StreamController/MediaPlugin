@@ -25,7 +25,7 @@ import globals as gl
 plugin_dir = os.path.dirname(__file__)
 sys.path.insert(0, plugin_dir)
 
-from settings import PluginSettings, KEY_LOG_LEVEL, DEFAULT_LOG_LEVEL, KEY_COMPOSITE_TIMEOUT, DEFAULT_COMPOSITE_TIMEOUT
+from .settings import PluginSettings, KEY_LOG_LEVEL, DEFAULT_LOG_LEVEL, KEY_COMPOSITE_TIMEOUT, DEFAULT_COMPOSITE_TIMEOUT
 from log_wrapper import log, set_log_level
 
 from MediaController import MediaController
