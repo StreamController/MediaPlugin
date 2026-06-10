@@ -102,10 +102,19 @@ class MediaAction(ActionBase):
         if settings is not None:
             return settings.get("player_name")
 
+    def get_display_player_name(self):
+        """Get the player name for display purposes (status, title, thumbnail).
+        When 'All Players' is selected, returns the currently-playing player
+        so the UI shows the active player's info instead of an arbitrary one."""
+        name = self.get_player_name()
+        if name is not None:
+            return name
+        return self.plugin_base.mc.get_active_player_name()
+
     def show_title(self, reload_key = True) -> bool:
         if self.get_settings() == None:
             return False
-        title = self.plugin_base.mc.title(self.get_player_name())
+        title = self.plugin_base.mc.title(self.get_display_player_name())
         if self.get_settings().setdefault("show_label", True) and title is not None:
             label = None
             if isinstance(title, list):
@@ -143,6 +152,27 @@ class MediaAction(ActionBase):
         # Update image
         self.on_tick()
 
+    def _load_thumbnail(self, player_name: str = None) -> "Image.Image | None":
+        """Load the thumbnail image for the given player.
+        Returns a PIL Image if a thumbnail is available, or None."""
+        import io as _io
+        settings = self.get_settings()
+        if settings is None:
+            return None
+        if not settings.setdefault("show_thumbnail", True):
+            return None
+        thumbnail = self.plugin_base.mc.thumbnail(player_name)
+        if thumbnail is None:
+            return None
+        if isinstance(thumbnail, list):
+            if thumbnail[0] is not None:
+                try:
+                    return Image.open(thumbnail[0])
+                except Exception as e:
+                    return None
+            return None
+        return None
+
     def generate_image(self, icon:Image.Image = None, background:Image.Image=None, valign: float = 0, halign: float = 0, size: float = 1):
         if background is None:
             background = Image.new("RGBA", (self.deck_controller.deck.key_image_format()["size"]), (0, 0, 0, 0))
@@ -151,12 +181,11 @@ class MediaAction(ActionBase):
         
         if icon is not None:
             # Resize
-            lenght = int(self.deck_controller.deck.key_image_format()["size"][0] * size)
-            icon = icon.resize((lenght, lenght))
+            length = int(self.deck_controller.deck.key_image_format()["size"][0] * size)
+            icon = icon.resize((length, length))
 
         left_margin = int((background.width - icon.width) * (halign + 1) / 2)
         top_margin = int((background.height - icon.height) * (valign + 1) / 2)
-
         background.paste(icon, (left_margin, top_margin), icon)
 
         return background

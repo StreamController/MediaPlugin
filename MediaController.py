@@ -16,6 +16,15 @@ class MediaController:
     def __init__(self):
         self.session_bus = dbus.SessionBus()
 
+        # Tracks the D-Bus bus names of players that were playing before a pause action.
+        # When pause is pressed, all currently-playing sources are recorded here.
+        # When play is pressed, only these remembered sources are resumed.
+        self._previously_playing: set[str] = set()
+
+        # Remembers the last player that was seen playing, so that when all
+        # players are paused the UI doesn't jump back to an arbitrary player.
+        self._last_active_player: str | None = None
+
         self.update_players()
 
     def update_players(self):
@@ -28,6 +37,19 @@ class MediaController:
             log.error("Could not connect to D-Bus session bus. Is the D-Bus daemon running?", e)
             return
         self.mpris_players = mpris_players
+
+    def _get_bus_name(self, player) -> str:
+        """Get the D-Bus bus name for a player proxy object."""
+        return str(player.bus_name)
+
+    def _get_playback_status(self, iface) -> str | None:
+        """Get the playback status of a player interface."""
+        try:
+            properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
+            return str(properties.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus'))
+        except dbus.exceptions.DBusException as e:
+            log.error(e)
+            return None
 
     def get_player_names(self, remove_duplicates = False):
         names = []
@@ -43,6 +65,22 @@ class MediaController:
             log.error("Could not connect to D-Bus session bus. Is the D-Bus daemon running?", e)
         return names
     
+    def get_active_player_name(self) -> str | None:
+        """Return the Identity of the first currently-playing MPRIS player.
+        Falls back to the last known active player if none are currently playing."""
+        self.update_players()
+        for player in self.mpris_players:
+            try:
+                properties = dbus.Interface(player, 'org.freedesktop.DBus.Properties')
+                status = str(properties.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus'))
+                if status == "Playing":
+                    name = str(properties.Get('org.mpris.MediaPlayer2', 'Identity'))
+                    self._last_active_player = name
+                    return name
+            except dbus.exceptions.DBusException:
+                pass
+        return self._last_active_player
+
     def get_matching_ifaces(self, player_name: str = None) -> list[dbus.Interface]:
         self.update_players()
         """
@@ -66,10 +104,30 @@ class MediaController:
                 if e.get_dbus_name() != "com.github.altdesktop.playerctld.NoActivePlayer":
                     log.warning(e)
         return ifaces
+
+    def get_matching_players(self, player_name: str = None) -> list[tuple[str, dbus.Interface]]:
+        """
+        Like get_matching_ifaces, but returns (bus_name, iface) tuples
+        so callers can identify individual player instances.
+        """
+        self.update_players()
+        players = []
+        for player in self.mpris_players:
+            properties = dbus.Interface(player, 'org.freedesktop.DBus.Properties')
+            try:
+                if player_name in [None, "", properties.Get('org.mpris.MediaPlayer2', 'Identity')]:
+                    bus_name = self._get_bus_name(player)
+                    iface = dbus.Interface(player, 'org.mpris.MediaPlayer2.Player')
+                    players.append((bus_name, iface))
+            except dbus.exceptions.DBusException as e:
+                log.warning(e)
+        return players
     
     def pause(self, player_name: str = None):
         """
         Pauses the media player specified by the `player_name` parameter.
+        Before pausing, records which players are currently playing so they
+        can be resumed later with play().
 
         Args:
             player_name (str, optional): The name of the media player to pause.
@@ -79,19 +137,32 @@ class MediaController:
             None
         """
         status = []
-        ifaces = self.get_matching_ifaces(player_name)
-        for iface in ifaces:
+        players = self.get_matching_players(player_name)
+        currently_playing = set()
+        for bus_name, iface in players:
             try:
+                playback_status = self._get_playback_status(iface)
+                if playback_status == "Playing":
+                    currently_playing.add(bus_name)
                 iface.Pause()
                 status.append(True)
             except dbus.exceptions.DBusException as e:
                 log.error(e)
                 status.append(False)
+
+        # Only update the remembered set if at least one player was actually playing.
+        # This avoids clearing the set if pause is pressed while already paused.
+        if currently_playing:
+            self._previously_playing = currently_playing
+
         return self.compress_list(status)
 
     def play(self, player_name: str = None):
         """
         Plays the media player specified by the `player_name` parameter.
+        If there are remembered previously-playing sources (from a prior pause),
+        only those sources will be resumed. Otherwise, all matching players
+        will be played.
 
         Args:
             player_name (str, optional): The name of the media player to play.
@@ -101,19 +172,37 @@ class MediaController:
             None
         """
         status = []
-        ifaces = self.get_matching_ifaces(player_name)
-        for iface in ifaces:
+        players = self.get_matching_players(player_name)
+        for bus_name, iface in players:
             try:
-                iface.Play()
-                status.append(True)
+                if player_name is not None:
+                    # Specific player requested: always play it
+                    iface.Play()
+                    status.append(True)
+                elif self._previously_playing:
+                    # General play with remembered set: only resume those
+                    if bus_name in self._previously_playing:
+                        iface.Play()
+                        status.append(True)
+                    else:
+                        status.append(True)  # skip, not an error
+                else:
+                    iface.Play()
+                    status.append(True)
             except dbus.exceptions.DBusException as e:
                 log.error(e)
                 status.append(False)
+
+        # Clear the remembered set after resuming
+        self._previously_playing.clear()
+
         return self.compress_list(status)
         
     def toggle(self, player_name: str = None):
         """
         Toggles the playback state of the media player specified by the `player_name` parameter.
+        Uses the smart pause/play logic: when pausing, remembers which sources were playing;
+        when playing, only resumes those remembered sources.
 
         Args:
             player_name (str, optional): The name of the media player to toggle.
@@ -122,16 +211,19 @@ class MediaController:
         Returns:
             None
         """
-        status = []
-        ifaces = self.get_matching_ifaces(player_name)
-        for iface in ifaces:
-            try:
-                iface.PlayPause()
-                status.append(True)
-            except dbus.exceptions.DBusException as e:
-                log.error(e)
-                status.append(False)
-        return self.compress_list(status)
+        # Check if any matching player is currently playing
+        players = self.get_matching_players(player_name)
+        any_playing = False
+        for bus_name, iface in players:
+            playback_status = self._get_playback_status(iface)
+            if playback_status == "Playing":
+                any_playing = True
+                break
+
+        if any_playing:
+            return self.pause(player_name)
+        else:
+            return self.play(player_name)
         
     def stop(self, player_name: str = None):
         """
@@ -257,8 +349,12 @@ class MediaController:
             try:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
-                path = str(metadata.get('mpris:artUrl'))
-                if path in [None, ""]:
+                art_url = metadata.get('mpris:artUrl')
+                if art_url is None:
+                    thumbnails.append(None)
+                    continue
+                path = str(art_url)
+                if not path:
                     thumbnails.append(None)
                     continue
                 if path.startswith("data:"):

@@ -37,7 +37,8 @@ class Play(MediaAction):
         super().__init__(*args, **kwargs)
 
     def on_key_down(self):
-        status = self.plugin_base.mc.status(self.get_player_name())
+        display_player = self.get_display_player_name()
+        status = self.plugin_base.mc.status(display_player)
         if status is None or status[0] != "Playing":
             self.plugin_base.mc.play(self.get_player_name())
 
@@ -54,7 +55,8 @@ class Play(MediaAction):
         if self.get_settings() == None:
             # Page not yet fully loaded
             return
-        status = self.plugin_base.mc.status(self.get_player_name())
+        display_player = self.get_display_player_name()
+        status = self.plugin_base.mc.status(display_player)
         if isinstance(status, list):
             status = status[0]
 
@@ -66,11 +68,11 @@ class Play(MediaAction):
             valign = 0
 
         icon_path = os.path.join(self.plugin_base.PATH, "assets", "play.png")
-        
+        image = Image.open(icon_path)
+
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
-            image = Image.open(icon_path)
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
             self.set_media(image=image, size=size, valign=valign)
@@ -78,41 +80,25 @@ class Play(MediaAction):
 
         self.current_status = status
 
-        ## Thumbnail
-        thumbnail = None
-        if self.get_settings().setdefault("show_thumbnail", True):
-            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
-            elif isinstance(thumbnail, list):
-                if thumbnail[0] == None:
-                    return
-                if isinstance(thumbnail[0], io.BytesIO):
-                    pass
-                elif not os.path.exists(thumbnail[0]):
-                    return
-                try:
-                    thumbnail = Image.open(thumbnail[0])
-                except:
-                    return
-
-
-        image = Image.open(icon_path)
-
         if status == "Playing":
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
-        
-        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
 
-        self.set_media(image=image)
+        ## Thumbnail
+        thumbnail = self._load_thumbnail(display_player)
+        if thumbnail is not None:
+            image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
+            self.set_media(image=image)
+        else:
+            self.set_media(image=image, size=size, valign=valign)
 
 class Pause(MediaAction):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def on_key_down(self):
-        status = self.plugin_base.mc.status(self.get_player_name())
+        display_player = self.get_display_player_name()
+        status = self.plugin_base.mc.status(display_player)
         if status is None or status[0] == "Playing":
             self.plugin_base.mc.pause(self.get_player_name())
 
@@ -129,7 +115,8 @@ class Pause(MediaAction):
         if self.get_settings() == None:
             # Page not yet fully loaded
             return
-        status = self.plugin_base.mc.status(self.get_player_name())
+        display_player = self.get_display_player_name()
+        status = self.plugin_base.mc.status(display_player)
         if isinstance(status, list):
             status = status[0]
 
@@ -141,11 +128,11 @@ class Pause(MediaAction):
             valign = 0
 
         icon_path = os.path.join(self.plugin_base.PATH, "assets", "pause.png")
-        
+        image = Image.open(icon_path)
+
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
-            image = Image.open(icon_path)
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
             self.set_media(image=image, size=size, valign=valign)
@@ -153,41 +140,24 @@ class Pause(MediaAction):
 
         self.current_status = status
 
-        ## Thumbnail
-        thumbnail = None
-        if self.get_settings().setdefault("show_thumbnail", True):
-            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
-            elif isinstance(thumbnail, list):
-                if thumbnail[0] == None:
-                    return
-                if isinstance(thumbnail[0], io.BytesIO):
-                    pass
-                elif not os.path.exists(thumbnail[0]):
-                    return
-                try:
-                    thumbnail = Image.open(thumbnail[0])
-                except:
-                    return
-
-
-        image = Image.open(icon_path)
-
         if status == "Paused":
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
-        
-        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
 
-        self.set_media(image=image)
+        thumbnail = self._load_thumbnail(display_player)
+        if thumbnail is not None:
+            image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
+            self.set_media(image=image)
+        else:
+            self.set_media(image=image, size=size, valign=valign)
 
 class PlayPause(MediaAction):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def on_key_down(self):
-        status = self.plugin_base.mc.status(self.get_player_name())
+        display_player = self.get_display_player_name()
+        status = self.plugin_base.mc.status(display_player)
         if status is None:
             return
         status = status[0]
@@ -209,7 +179,8 @@ class PlayPause(MediaAction):
         if self.get_settings() == None:
             # Page not yet fully loaded
             return
-        status = self.plugin_base.mc.status(self.get_player_name())
+        display_player = self.get_display_player_name()
+        status = self.plugin_base.mc.status(display_player)
         if isinstance(status, list):
             status = status[0]
 
@@ -218,14 +189,14 @@ class PlayPause(MediaAction):
             "Paused": os.path.join(self.plugin_base.PATH, "assets", "play.png"),
             "Stopped": os.path.join(self.plugin_base.PATH, "assets", "stop.png"), #play.png might make more sense
         }
-        
+
         if self.show_title():
             size = 0.75
             valign = -1
         else:
             size = 1
             valign = 0
-        
+
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
@@ -238,30 +209,14 @@ class PlayPause(MediaAction):
 
         self.current_status = status
 
-        ## Thumbnail
-        thumbnail = None
-        if self.get_settings().setdefault("show_thumbnail", True):
-            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
-            elif isinstance(thumbnail, list):
-                if thumbnail[0] == None:
-                    return
-                if isinstance(thumbnail[0], io.BytesIO):
-                    pass
-                elif not os.path.exists(thumbnail[0]):
-                    return
-                try:
-                    thumbnail = Image.open(thumbnail[0])
-                except:
-                    return
-
-
         image = Image.open(file.get(status, file["Stopped"]))
-        
-        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
 
-        self.set_media(image=image)
+        thumbnail = self._load_thumbnail(display_player)
+        if thumbnail is not None:
+            image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
+            self.set_media(image=image)
+        else:
+            self.set_media(image=image, size=size, valign=valign)
 
 class Next(MediaAction):
     def __init__(self, *args, **kwargs):
@@ -277,7 +232,8 @@ class Next(MediaAction):
         self.update_image()
 
     def update_image(self):
-        status = self.plugin_base.mc.status(self.get_player_name())
+        display_player = self.get_display_player_name()
+        status = self.plugin_base.mc.status(display_player)
         if isinstance(status, list):
             status = status[0]
 
@@ -293,23 +249,15 @@ class Next(MediaAction):
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
 
-        
-        thumbnail = None
         if self.get_settings() is None:
             return
-        if self.get_settings().setdefault("show_thumbnail", True):
-            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
-            elif isinstance(thumbnail, list):
-                try:
-                    thumbnail = Image.open(thumbnail[0])
-                except:
-                    return
-                
-        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
 
-        self.set_media(image=image)     
+        thumbnail = self._load_thumbnail(display_player)
+        if thumbnail is not None:
+            image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
+            self.set_media(image=image)
+        else:
+            self.set_media(image=image, size=size, valign=valign)
 
 class Previous(MediaAction):
     def __init__(self, *args, **kwargs):
@@ -325,7 +273,8 @@ class Previous(MediaAction):
         self.update_image()
 
     def update_image(self):
-        status = self.plugin_base.mc.status(self.get_player_name())
+        display_player = self.get_display_player_name()
+        status = self.plugin_base.mc.status(display_player)
         if isinstance(status, list):
             status = status[0]
 
@@ -340,23 +289,16 @@ class Previous(MediaAction):
         if status == None:
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
-        
-        thumbnail = None
+
         if self.get_settings() is None:
             return
-        if self.get_settings().setdefault("show_thumbnail", True):
-            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
-            elif isinstance(thumbnail, list):
-                try:
-                    thumbnail = Image.open(thumbnail[0])
-                except:
-                    return
 
-        image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
-
-        self.set_media(image=image) 
+        thumbnail = self._load_thumbnail(display_player)
+        if thumbnail is not None:
+            image = self.generate_image(background=thumbnail, icon=image, size=size, valign=valign)
+            self.set_media(image=image)
+        else:
+            self.set_media(image=image, size=size, valign=valign)
 
 class Info(MediaAction):
     def __init__(self, *args, **kwargs):
@@ -366,8 +308,9 @@ class Info(MediaAction):
         self.update_image()
 
     def update_image(self):
-        title = self.plugin_base.mc.title(self.get_player_name())
-        artist = self.plugin_base.mc.artist(self.get_player_name())
+        display_player = self.get_display_player_name()
+        title = self.plugin_base.mc.title(display_player)
+        artist = self.plugin_base.mc.artist(display_player)
 
         if title is not None:
             title = self.shorten_label(title[0], 10)
@@ -381,24 +324,7 @@ class Info(MediaAction):
         self.set_center_label(self.get_settings().get("seperator_text", "--"), font_size=12)
         self.set_bottom_label(str(artist), font_size=12)
 
-        ## Thumbnail
-        thumbnail = None
-        if self.get_settings().setdefault("show_thumbnail", True):
-            thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
-            if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
-            elif isinstance(thumbnail, list):
-                if thumbnail[0] == None:
-                    return
-                if isinstance(thumbnail[0], io.BytesIO):
-                    pass
-                elif not os.path.exists(thumbnail[0]):
-                    return
-                try:
-                    thumbnail = Image.open(thumbnail[0])
-                except:
-                    return
-                
+        thumbnail = self._load_thumbnail(display_player)
         self.set_media(image=thumbnail)
 
     def get_config_rows(self):
@@ -692,8 +618,9 @@ class ThumbnailBackground(MediaAction):
         """Check if update is needed based on state changes."""
         
         # Check if media is playing
-        title = self.plugin_base.mc.title(self.get_player_name()) # type: ignore[attr-defined]
-        artist = self.plugin_base.mc.artist(self.get_player_name()) # type: ignore[attr-defined]
+        display_player = self.get_display_player_name()
+        title = self.plugin_base.mc.title(display_player) # type: ignore[attr-defined]
+        artist = self.plugin_base.mc.artist(display_player) # type: ignore[attr-defined]
         
         # If both title and artist are None, no media is playing
         if title is None and artist is None:
@@ -741,7 +668,7 @@ class ThumbnailBackground(MediaAction):
         Returns None if no thumbnail is available or if the data format is unexpected.
         """
         try:
-            thumbnail_data = self.plugin_base.mc.thumbnail(self.get_player_name()) # type: ignore[attr-defined]
+            thumbnail_data = self.plugin_base.mc.thumbnail(self.get_display_player_name()) # type: ignore[attr-defined]
             if isinstance(thumbnail_data, list) and thumbnail_data:
                 first_item = thumbnail_data[0]
                 # Validate that the first item is a non-empty string and a valid file
@@ -1192,8 +1119,6 @@ class ThumbnailBackground(MediaAction):
         - Request final composite to show remaining actions/background
         """
 
-        log.debug("ThumbnailBackground: clear called, cleaning up cached images")
-        
         # Reset this instance's tracking variables
         self.last_thumbnail_path = None
         self.last_size_mode = None
