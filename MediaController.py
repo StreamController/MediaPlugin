@@ -1,6 +1,7 @@
 from functools import lru_cache
 from itertools import groupby
 import dbus
+import dbus.mainloop
 import sys
 import os
 import io
@@ -14,7 +15,14 @@ from loguru import logger as log
 
 class MediaController:
     def __init__(self):
-        self.session_bus = dbus.SessionBus()
+        # Use a private connection with no main-loop integration: the shared
+        # SessionBus singleton attaches its watch sources to the default GLib
+        # main context (StreamController sets DBusGMainLoop as default), and
+        # blocking calls from the tick thread then leave that source
+        # permanently ready, spinning the GTK main loop at 100% CPU.
+        # NULL_MAIN_LOOP keeps this connection self-polling; this plugin uses
+        # no D-Bus signal receivers, so no main loop is needed.
+        self.session_bus = dbus.SessionBus(private=True, mainloop=dbus.mainloop.NULL_MAIN_LOOP)
 
         self.update_players()
 
