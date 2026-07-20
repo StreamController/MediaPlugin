@@ -274,6 +274,7 @@ class MediaController:
                     thumbnails.append(None)
                     continue
                 path = path.replace("file://", "")
+                path = self.resolve_host_path(path)
                 thumbnails.append(path)
             except (KeyError, IndexError) as e:
                 thumbnails.append(None)
@@ -282,6 +283,47 @@ class MediaController:
                 thumbnails.append(None)            
 
         return self.compress_list(thumbnails)
+
+    def resolve_host_path(self, path: str) -> str:
+        """
+        Resolve a file:// thumbnail path that may only exist on the host.
+
+        Browser-based players (Chromium, Firefox) write their MPRIS art to the
+        host's /tmp, which is not visible inside the flatpak sandbox. If the
+        path does not exist in the sandbox, fetch the file via
+        `flatpak-spawn --host` and cache it under the plugin's cache directory,
+        keyed by content hash so a track change produces a new path (which the
+        thumbnail change detection relies on).
+
+        Args:
+            path (str): Absolute path from the player's mpris:artUrl.
+
+        Returns:
+            str: A readable path to the artwork, or the original path if it
+            could not be fetched.
+        """
+        if os.path.exists(path):
+            return path
+        import hashlib
+        import subprocess
+        try:
+            # cwd="/": flatpak-spawn --host starts the host command in the
+            # caller's cwd, and the sandbox cwd (/app/...) does not exist on the host
+            result = subprocess.run(["flatpak-spawn", "--host", "cat", path],
+                                    capture_output=True, timeout=5, cwd="/")
+            if result.returncode != 0 or not result.stdout:
+                log.debug(f"Could not fetch host thumbnail {path}: rc={result.returncode}")
+                return path
+            cache_dir = os.path.join(gl.DATA_PATH, "com_core447_MediaPlugin", "cache")
+            os.makedirs(cache_dir, exist_ok=True)
+            cached = os.path.join(cache_dir, hashlib.md5(result.stdout).hexdigest() + ".art")
+            if not os.path.exists(cached):
+                with open(cached, "wb") as f:
+                    f.write(result.stdout)
+            return cached
+        except Exception as e:
+            log.error(f"Failed to fetch host thumbnail {path}: {e}")
+            return path
 
     def compress_list(self, _list) -> list | bool:
         if len(_list) == 0:
