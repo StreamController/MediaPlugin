@@ -1315,12 +1315,130 @@ class ThumbnailBackground(MediaAction):
         self.clear()
 
 
+FONT_MAP = {
+    "DejaVu Sans Book": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "DejaVu Sans Bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "Ubuntu Regular": "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+    "Ubuntu Bold": "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
+    "Liberation Sans": "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    "Liberation Sans Bold": "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+}
+
+
 class MediaDial(MediaAction):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.scroll_offset = 0
         self.last_title = ""
-        self.cached_accent_color = (29, 185, 84)
+        self.cached_accent_color = (40, 220, 100)
+
+    def get_config_rows(self) -> "list[Adw.PreferencesRow]":
+        base_rows = super().get_config_rows()
+
+        # Artist settings UI
+        self.artist_font_model = Gtk.StringList()
+        for fname in FONT_MAP.keys():
+            self.artist_font_model.append(fname)
+
+        self.artist_font_row = Adw.ComboRow(
+            model=self.artist_font_model,
+            title="Artist Font",
+            subtitle="Font family for the artist name"
+        )
+        self.artist_size_row = Adw.SpinRow.new_with_range(min=8, max=32, step=1)
+        self.artist_size_row.set_title("Artist Font Size")
+        self.artist_size_row.set_subtitle("Font size in pixels for dial display")
+
+        self.artist_outline_row = Adw.SpinRow.new_with_range(min=0, max=5, step=1)
+        self.artist_outline_row.set_title("Artist Outline Width")
+        self.artist_outline_row.set_subtitle("Outline width in pixels")
+
+        # Song settings UI
+        self.song_font_model = Gtk.StringList()
+        for fname in FONT_MAP.keys():
+            self.song_font_model.append(fname)
+
+        self.song_font_row = Adw.ComboRow(
+            model=self.song_font_model,
+            title="Song Font",
+            subtitle="Font family for the song title"
+        )
+        self.song_size_row = Adw.SpinRow.new_with_range(min=8, max=40, step=1)
+        self.song_size_row.set_title("Song Font Size")
+        self.song_size_row.set_subtitle("Font size in pixels for dial display")
+
+        self.song_outline_row = Adw.SpinRow.new_with_range(min=0, max=5, step=1)
+        self.song_outline_row.set_title("Song Outline Width")
+        self.song_outline_row.set_subtitle("Outline width in pixels")
+
+        self.load_dial_config_defaults()
+
+        self.artist_font_row.connect("notify::selected-item", self.on_change_dial_config)
+        self.artist_size_row.connect("changed", self.on_change_dial_config)
+        self.artist_outline_row.connect("changed", self.on_change_dial_config)
+
+        self.song_font_row.connect("notify::selected-item", self.on_change_dial_config)
+        self.song_size_row.connect("changed", self.on_change_dial_config)
+        self.song_outline_row.connect("changed", self.on_change_dial_config)
+
+        return base_rows + [
+            self.artist_font_row,
+            self.artist_size_row,
+            self.artist_outline_row,
+            self.song_font_row,
+            self.song_size_row,
+            self.song_outline_row
+        ]
+
+    def load_dial_config_defaults(self):
+        settings = self.get_settings()
+        if settings is None:
+            return
+
+        artist_font = settings.setdefault("artist_font", "DejaVu Sans Book")
+        artist_size = settings.setdefault("artist_font_size", 14)
+        artist_outline = settings.setdefault("artist_outline_size", 1)
+
+        song_font = settings.setdefault("song_font", "DejaVu Sans Bold")
+        song_size = settings.setdefault("song_font_size", 20)
+        song_outline = settings.setdefault("song_outline_size", 2)
+
+        for i in range(self.artist_font_model.get_n_items()):
+            if self.artist_font_model.get_item(i).get_string() == artist_font:
+                self.artist_font_row.set_selected(i)
+                break
+
+        for i in range(self.song_font_model.get_n_items()):
+            if self.song_font_model.get_item(i).get_string() == song_font:
+                self.song_font_row.set_selected(i)
+                break
+
+        self.artist_size_row.set_value(float(artist_size))
+        self.artist_outline_row.set_value(float(artist_outline))
+        self.song_size_row.set_value(float(song_size))
+        self.song_outline_row.set_value(float(song_outline))
+
+    def on_change_dial_config(self, *args):
+        settings = self.get_settings()
+        if settings is None:
+            return
+
+        if hasattr(self, "artist_font_row") and self.artist_font_row.get_selected_item():
+            settings["artist_font"] = self.artist_font_row.get_selected_item().get_string()
+        if hasattr(self, "artist_size_row"):
+            settings["artist_font_size"] = int(self.artist_size_row.get_value())
+        if hasattr(self, "artist_outline_row"):
+            settings["artist_outline_size"] = int(self.artist_outline_row.get_value())
+
+        if hasattr(self, "song_font_row") and self.song_font_row.get_selected_item():
+            settings["song_font"] = self.song_font_row.get_selected_item().get_string()
+        if hasattr(self, "song_size_row"):
+            settings["song_font_size"] = int(self.song_size_row.get_value())
+        if hasattr(self, "song_outline_row"):
+            settings["song_outline_size"] = int(self.song_outline_row.get_value())
+
+        self.set_settings(settings)
+        self.update_image()
 
     def on_ready(self):
         self.update_image()
@@ -1347,7 +1465,7 @@ class MediaDial(MediaAction):
 
     def extract_accent_color(self, thumbnail: Image.Image) -> tuple[int, int, int]:
         if thumbnail is None:
-            return (40, 220, 100) # Bright vivid green
+            return (40, 220, 100)
         try:
             small = thumbnail.convert("RGB").resize((32, 32))
             pixels = list(small.getdata())
@@ -1390,19 +1508,12 @@ class MediaDial(MediaAction):
             pass
         return (40, 220, 100)
 
-    def load_font(self, font_size: int, bold: bool = False):
-        font_paths = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf" if bold else "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
-            "/usr/share/fonts/truetype/ubuntu/Ubuntu[wdth,wght].ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-        ]
-        for p in font_paths:
-            if os.path.exists(p):
-                try:
-                    return ImageFont.truetype(p, font_size)
-                except Exception:
-                    pass
+    def load_font_by_path(self, font_path: str, font_size: int):
+        if font_path and os.path.exists(font_path):
+            try:
+                return ImageFont.truetype(font_path, font_size)
+            except Exception:
+                pass
         return ImageFont.load_default()
 
     def get_player_source_icon(self, player_key: str) -> Image.Image | None:
@@ -1428,21 +1539,24 @@ class MediaDial(MediaAction):
         if isinstance(status, list):
             status = status[0]
 
-        # High-res canvas resolution (400x200 base for sharp font rendering & screen fit)
-        canvas_size = (400, 200)
-        try:
-            if hasattr(self, "get_input") and self.get_input() is not None:
-                input_size = self.get_input().get_image_size()
-                if input_size and input_size[0] >= 400 and input_size[1] >= 200:
-                    canvas_size = input_size
-            elif hasattr(self, "deck_controller") and self.deck_controller is not None:
-                deck_size = self.deck_controller.deck.key_image_format()["size"]
-                if deck_size and deck_size[0] >= 400 and deck_size[1] >= 200:
-                    canvas_size = deck_size
-        except Exception:
-            pass
+        # Dial display canvas resolution strictly 200x100
+        width, height = 200, 100
 
-        width, height = canvas_size[0], canvas_size[1]
+        # Load independent user font settings
+        settings = self.get_settings() or {}
+        artist_font_name = settings.get("artist_font", "DejaVu Sans Book")
+        artist_font_size = int(settings.get("artist_font_size", 14))
+        artist_outline_size = int(settings.get("artist_outline_size", 1))
+
+        song_font_name = settings.get("song_font", "DejaVu Sans Bold")
+        song_font_size = int(settings.get("song_font_size", 20))
+        song_outline_size = int(settings.get("song_outline_size", 2))
+
+        artist_font_path = FONT_MAP.get(artist_font_name, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+        song_font_path = FONT_MAP.get(song_font_name, "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+
+        artist_font = self.load_font_by_path(artist_font_path, artist_font_size)
+        song_font = self.load_font_by_path(song_font_path, song_font_size)
 
         if status is None:
             idle_image = self.get_idle_icon()
@@ -1451,8 +1565,8 @@ class MediaDial(MediaAction):
                 return
             bg = Image.new("RGBA", (width, height), (20, 20, 20, 255))
             draw = ImageDraw.Draw(bg)
-            font = self.load_font(int(height * 0.15), bold=True)
-            draw.text((width // 2, height // 2), "No Media Playing", fill=(180, 180, 180, 255), font=font, anchor="mm", stroke_width=2, stroke_fill=(0, 0, 0, 255))
+            font = self.load_font_by_path(song_font_path, 15)
+            draw.text((width // 2, height // 2), "No Media Playing", fill=(180, 180, 180, 255), font=font, anchor="mm", stroke_width=song_outline_size, stroke_fill=(0, 0, 0, 255))
             self.set_media(image=bg, size=1.0)
             return
 
@@ -1511,80 +1625,74 @@ class MediaDial(MediaAction):
 
         # 1. Source Icon (Top Right)
         source_icon = self.get_player_source_icon(player_key)
-        icon_margin_right = int(width * 0.04)
-        icon_margin_top = int(height * 0.05)
-        icon_size = int(height * 0.22) # ~44px on 200px height
+        icon_margin_right = 8
+        icon_margin_top = 4
+        icon_size = 22
         icon_x = width - icon_margin_right - icon_size
         
         if source_icon:
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
 
-        # 2. Artist Name & Song Title (Legible, bold font sizes)
-        left_margin = int(width * 0.04)
+        # 2. Artist Name & Song Title (Independent Configuration)
+        left_margin = 8
         
-        # Artist Name beside source icon
-        max_artist_width = max(100, icon_x - left_margin - 8)
-        artist_font_size = max(28, int(height * 0.16)) # 32px font on 200px height canvas (DejaVu Sans Book)
+        # Artist Name sits at top-left beside the source icon
+        max_artist_width = max(50, icon_x - left_margin - 4)
+        artist_y = 4
 
-        # Song Name spanning full width below top icon
-        max_song_width = width - (left_margin * 2)
-        song_font_size = max(44, int(height * 0.25))   # 50px font on 200px height canvas (DejaVu Sans Bold)
-
-        artist_font = self.load_font(artist_font_size, bold=False)
-        song_font = self.load_font(song_font_size, bold=True)
-
-        artist_y = int(height * 0.04)
-        song_y = artist_y + artist_font_size + int(height * 0.01)
-
-        # Artist text (DejaVu Sans Book with 2px dark outline)
+        # Artist text with independent outline and font settings
         artist_text = artist
-        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=2)
+        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=artist_outline_size)
         if (artist_bbox[2] - artist_bbox[0]) > max_artist_width:
-            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=2)[2] > max_artist_width:
+            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=artist_outline_size)[2] > max_artist_width:
                 artist_text = artist_text[:-1]
             artist_text += ".."
         
-        draw.text((left_margin, artist_y), artist_text, fill=(255, 255, 255, 255), font=artist_font, stroke_width=2, stroke_fill=(0, 0, 0, 240))
+        draw.text((left_margin, artist_y), artist_text, fill=(255, 255, 255, 255), font=artist_font, stroke_width=artist_outline_size, stroke_fill=(0, 0, 0, 240))
 
-        # Song title scrolling marquee (DejaVu Sans Bold with 2px dark outline)
+        # Song Name sits below Artist Name and spans full width underneath source icon level
+        max_song_width = width - (left_margin * 2)
+        song_y = artist_y + artist_font_size + 1
+
+        # Song title scrolling marquee with independent outline and font settings
         if title != self.last_title:
             self.last_title = title
             self.scroll_offset = 0
 
-        song_bbox = draw.textbbox((0, 0), title, font=song_font, stroke_width=2)
+        song_bbox = draw.textbbox((0, 0), title, font=song_font, stroke_width=song_outline_size)
         song_width = song_bbox[2] - song_bbox[0]
 
         if song_width > max_song_width:
-            text_surf = Image.new("RGBA", (song_width + 80, song_font_size + 16), (0, 0, 0, 0))
+            text_surf = Image.new("RGBA", (song_width + 40, song_font_size + 8), (0, 0, 0, 0))
             t_draw = ImageDraw.Draw(text_surf)
-            t_draw.text((0, 0), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=2, stroke_fill=(0, 0, 0, 240))
+            t_draw.text((0, 0), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=song_outline_size, stroke_fill=(0, 0, 0, 240))
             
-            self.scroll_offset += 5
-            if self.scroll_offset > (song_width - max_song_width + 40):
-                self.scroll_offset = -15
+            self.scroll_offset += 3
+            if self.scroll_offset > (song_width - max_song_width + 20):
+                self.scroll_offset = -10
             
             crop_x = max(0, int(self.scroll_offset))
-            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_song_width, song_font_size + 16))
+            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_song_width, song_font_size + 8))
             bg_canvas.paste(cropped_text, (left_margin, song_y), cropped_text)
         else:
-            draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=2, stroke_fill=(0, 0, 0, 240))
+            draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=song_outline_size, stroke_fill=(0, 0, 0, 240))
 
-        # 3. Progression Bar (Undimmed, bright crisp track & lightened accent color)
-        bar_y = int(height * 0.62)
-        bar_height = max(18, int(height * 0.11)) # ~22px height
+        # 3. Progression Bar & Timestamps (Undimmed, bright crisp track & lightened accent color)
+        bar_y = 63
+        bar_height = 11
         bar_margin = left_margin
         bar_width = width - (bar_margin * 2)
 
-        track_bg = (45, 45, 52, 245) # Undimmed, crisp progress bar container
-        track_border = (200, 200, 210, 255) # Bright border outline
+        track_bg = (45, 45, 52, 245)
+        track_border = (200, 200, 210, 255)
         
         draw.rounded_rectangle(
             [bar_margin, bar_y, bar_margin + bar_width, bar_y + bar_height],
             radius=bar_height // 2,
             fill=track_bg,
             outline=track_border,
-            width=2
+            width=1
         )
 
         if duration > 0:
@@ -1593,7 +1701,7 @@ class MediaDial(MediaAction):
             progress_ratio = 0.0
 
         fill_width = int(bar_width * progress_ratio)
-        if fill_width > 4:
+        if fill_width > 2:
             accent_rgb = self.cached_accent_color
             draw.rounded_rectangle(
                 [bar_margin, bar_y, bar_margin + fill_width, bar_y + bar_height],
@@ -1602,9 +1710,9 @@ class MediaDial(MediaAction):
             )
 
         # Timestamps
-        time_font_size = max(24, int(height * 0.14)) # 28px font
-        time_font = self.load_font(time_font_size, bold=True)
-        time_y = bar_y + bar_height + int(height * 0.03)
+        time_font_size = 14
+        time_font = self.load_font_by_path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", time_font_size)
+        time_y = bar_y + bar_height + 3
 
         pos_min, pos_sec = int(position // 60), int(position % 60)
         dur_min, dur_sec = int(duration // 60), int(duration % 60)
@@ -1612,10 +1720,10 @@ class MediaDial(MediaAction):
         pos_str = f"{pos_min:02d}:{pos_sec:02d}"
         dur_str = f"{dur_min:02d}:{dur_sec:02d}"
 
-        draw.text((bar_margin, time_y), pos_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=2, stroke_fill=(0, 0, 0, 240))
-        dur_bbox = draw.textbbox((0, 0), dur_str, font=time_font, stroke_width=2)
+        draw.text((bar_margin, time_y), pos_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=1, stroke_fill=(0, 0, 0, 240))
+        dur_bbox = draw.textbbox((0, 0), dur_str, font=time_font, stroke_width=1)
         dur_w = dur_bbox[2] - dur_bbox[0]
-        draw.text((width - bar_margin - dur_w, time_y), dur_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=2, stroke_fill=(0, 0, 0, 240))
+        draw.text((width - bar_margin - dur_w, time_y), dur_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=1, stroke_fill=(0, 0, 0, 240))
 
         self.set_media(image=bg_canvas, size=1.0)
 
