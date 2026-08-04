@@ -1335,58 +1335,44 @@ class MediaDial(MediaAction):
     def get_config_rows(self) -> "list[Adw.PreferencesRow]":
         base_rows = super().get_config_rows()
 
-        # Artist settings UI
-        self.artist_font_model = Gtk.StringList()
-        for fname in FONT_MAP.keys():
-            self.artist_font_model.append(fname)
-
-        self.artist_font_row = Adw.ComboRow(
-            model=self.artist_font_model,
-            title="Artist Font",
-            subtitle="Font family for the artist name"
+        # Artist font configuration using native Gtk.FontButton
+        self.artist_font_row = Adw.ActionRow(
+            title="Artist Font & Size",
+            subtitle="Select font family and size for the artist name"
         )
-        self.artist_size_row = Adw.SpinRow.new_with_range(min=8, max=32, step=1)
-        self.artist_size_row.set_title("Artist Font Size")
-        self.artist_size_row.set_subtitle("Font size in pixels for dial display")
+        self.artist_font_button = Gtk.FontButton()
+        self.artist_font_button.set_valign(Gtk.Align.CENTER)
+        self.artist_font_row.add_suffix(self.artist_font_button)
 
-        self.artist_outline_row = Adw.SpinRow.new_with_range(min=0, max=5, step=1)
+        self.artist_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
         self.artist_outline_row.set_title("Artist Outline Width")
         self.artist_outline_row.set_subtitle("Outline width in pixels")
 
-        # Song settings UI
-        self.song_font_model = Gtk.StringList()
-        for fname in FONT_MAP.keys():
-            self.song_font_model.append(fname)
-
-        self.song_font_row = Adw.ComboRow(
-            model=self.song_font_model,
-            title="Song Font",
-            subtitle="Font family for the song title"
+        # Song font configuration using native Gtk.FontButton
+        self.song_font_row = Adw.ActionRow(
+            title="Song Font & Size",
+            subtitle="Select font family and size for the song title"
         )
-        self.song_size_row = Adw.SpinRow.new_with_range(min=8, max=40, step=1)
-        self.song_size_row.set_title("Song Font Size")
-        self.song_size_row.set_subtitle("Font size in pixels for dial display")
+        self.song_font_button = Gtk.FontButton()
+        self.song_font_button.set_valign(Gtk.Align.CENTER)
+        self.song_font_row.add_suffix(self.song_font_button)
 
-        self.song_outline_row = Adw.SpinRow.new_with_range(min=0, max=5, step=1)
+        self.song_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
         self.song_outline_row.set_title("Song Outline Width")
         self.song_outline_row.set_subtitle("Outline width in pixels")
 
         self.load_dial_config_defaults()
 
-        self.artist_font_row.connect("notify::selected-item", self.on_change_dial_config)
-        self.artist_size_row.connect("changed", self.on_change_dial_config)
+        self.artist_font_button.connect("font-set", self.on_change_artist_font)
         self.artist_outline_row.connect("changed", self.on_change_dial_config)
 
-        self.song_font_row.connect("notify::selected-item", self.on_change_dial_config)
-        self.song_size_row.connect("changed", self.on_change_dial_config)
+        self.song_font_button.connect("font-set", self.on_change_song_font)
         self.song_outline_row.connect("changed", self.on_change_dial_config)
 
         return base_rows + [
             self.artist_font_row,
-            self.artist_size_row,
             self.artist_outline_row,
             self.song_font_row,
-            self.song_size_row,
             self.song_outline_row
         ]
 
@@ -1395,48 +1381,69 @@ class MediaDial(MediaAction):
         if settings is None:
             return
 
-        artist_font = settings.setdefault("artist_font", "DejaVu Sans Book")
-        artist_size = settings.setdefault("artist_font_size", 14)
+        artist_font_name = settings.setdefault("artist_font_name", "DejaVu Sans")
+        artist_font_size = settings.setdefault("artist_font_size", 14)
         artist_outline = settings.setdefault("artist_outline_size", 1)
 
-        song_font = settings.setdefault("song_font", "DejaVu Sans Bold")
-        song_size = settings.setdefault("song_font_size", 20)
+        song_font_name = settings.setdefault("song_font_name", "DejaVu Sans Bold")
+        song_font_size = settings.setdefault("song_font_size", 20)
         song_outline = settings.setdefault("song_outline_size", 2)
 
-        for i in range(self.artist_font_model.get_n_items()):
-            if self.artist_font_model.get_item(i).get_string() == artist_font:
-                self.artist_font_row.set_selected(i)
-                break
+        try:
+            artist_desc = Pango.FontDescription.from_string(f"{artist_font_name} {artist_font_size}")
+            self.artist_font_button.set_font_desc(artist_desc)
+        except Exception:
+            pass
 
-        for i in range(self.song_font_model.get_n_items()):
-            if self.song_font_model.get_item(i).get_string() == song_font:
-                self.song_font_row.set_selected(i)
-                break
+        try:
+            song_desc = Pango.FontDescription.from_string(f"{song_font_name} {song_font_size}")
+            self.song_font_button.set_font_desc(song_desc)
+        except Exception:
+            pass
 
-        self.artist_size_row.set_value(float(artist_size))
         self.artist_outline_row.set_value(float(artist_outline))
-        self.song_size_row.set_value(float(song_size))
         self.song_outline_row.set_value(float(song_outline))
+
+    def on_change_artist_font(self, button):
+        settings = self.get_settings()
+        if settings is None:
+            return
+        font_desc = button.get_font_desc()
+        if font_desc:
+            family = font_desc.get_family() or "DejaVu Sans"
+            size_pango = font_desc.get_size()
+            size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
+            if size <= 0:
+                size = 14
+            settings["artist_font_name"] = family
+            settings["artist_font_size"] = size
+            self.set_settings(settings)
+            self.update_image()
+
+    def on_change_song_font(self, button):
+        settings = self.get_settings()
+        if settings is None:
+            return
+        font_desc = button.get_font_desc()
+        if font_desc:
+            family = font_desc.get_family() or "DejaVu Sans"
+            size_pango = font_desc.get_size()
+            size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
+            if size <= 0:
+                size = 20
+            settings["song_font_name"] = family
+            settings["song_font_size"] = size
+            self.set_settings(settings)
+            self.update_image()
 
     def on_change_dial_config(self, *args):
         settings = self.get_settings()
         if settings is None:
             return
-
-        if hasattr(self, "artist_font_row") and self.artist_font_row.get_selected_item():
-            settings["artist_font"] = self.artist_font_row.get_selected_item().get_string()
-        if hasattr(self, "artist_size_row"):
-            settings["artist_font_size"] = int(self.artist_size_row.get_value())
         if hasattr(self, "artist_outline_row"):
             settings["artist_outline_size"] = int(self.artist_outline_row.get_value())
-
-        if hasattr(self, "song_font_row") and self.song_font_row.get_selected_item():
-            settings["song_font"] = self.song_font_row.get_selected_item().get_string()
-        if hasattr(self, "song_size_row"):
-            settings["song_font_size"] = int(self.song_size_row.get_value())
         if hasattr(self, "song_outline_row"):
             settings["song_outline_size"] = int(self.song_outline_row.get_value())
-
         self.set_settings(settings)
         self.update_image()
 
@@ -1508,12 +1515,40 @@ class MediaDial(MediaAction):
             pass
         return (40, 220, 100)
 
-    def load_font_by_path(self, font_path: str, font_size: int):
+    def load_font_by_name(self, font_name: str, font_size: int):
+        if font_size <= 0:
+            font_size = 14
+        font_path = ""
+        if font_name:
+            try:
+                res = subprocess.run(
+                    ["fc-match", "-f", "%{file}\n", font_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=1.0
+                )
+                p = res.stdout.strip()
+                if p and os.path.exists(p):
+                    font_path = p
+            except Exception:
+                pass
+
         if font_path and os.path.exists(font_path):
             try:
                 return ImageFont.truetype(font_path, font_size)
             except Exception:
                 pass
+
+        for fallback in [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if "bold" in font_name.lower() else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+        ]:
+            if os.path.exists(fallback):
+                try:
+                    return ImageFont.truetype(fallback, font_size)
+                except Exception:
+                    pass
         return ImageFont.load_default()
 
     def get_player_source_icon(self, player_key: str) -> Image.Image | None:
@@ -1544,19 +1579,16 @@ class MediaDial(MediaAction):
 
         # Load independent user font settings
         settings = self.get_settings() or {}
-        artist_font_name = settings.get("artist_font", "DejaVu Sans Book")
+        artist_font_name = settings.get("artist_font_name", "DejaVu Sans")
         artist_font_size = int(settings.get("artist_font_size", 14))
         artist_outline_size = int(settings.get("artist_outline_size", 1))
 
-        song_font_name = settings.get("song_font", "DejaVu Sans Bold")
+        song_font_name = settings.get("song_font_name", "DejaVu Sans Bold")
         song_font_size = int(settings.get("song_font_size", 20))
         song_outline_size = int(settings.get("song_outline_size", 2))
 
-        artist_font_path = FONT_MAP.get(artist_font_name, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
-        song_font_path = FONT_MAP.get(song_font_name, "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
-
-        artist_font = self.load_font_by_path(artist_font_path, artist_font_size)
-        song_font = self.load_font_by_path(song_font_path, song_font_size)
+        artist_font = self.load_font_by_name(artist_font_name, artist_font_size)
+        song_font = self.load_font_by_name(song_font_name, song_font_size)
 
         if status is None:
             idle_image = self.get_idle_icon()
@@ -1565,7 +1597,7 @@ class MediaDial(MediaAction):
                 return
             bg = Image.new("RGBA", (width, height), (20, 20, 20, 255))
             draw = ImageDraw.Draw(bg)
-            font = self.load_font_by_path(song_font_path, 15)
+            font = self.load_font_by_name(song_font_name, 15)
             draw.text((width // 2, height // 2), "No Media Playing", fill=(180, 180, 180, 255), font=font, anchor="mm", stroke_width=song_outline_size, stroke_fill=(0, 0, 0, 255))
             self.set_media(image=bg, size=1.0)
             return
@@ -1711,7 +1743,7 @@ class MediaDial(MediaAction):
 
         # Timestamps
         time_font_size = 14
-        time_font = self.load_font_by_path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", time_font_size)
+        time_font = self.load_font_by_name("DejaVu Sans Bold", time_font_size)
         time_y = bar_y + bar_height + 3
 
         pos_min, pos_sec = int(position // 60), int(position % 60)
