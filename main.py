@@ -1356,7 +1356,10 @@ class MediaDial(MediaAction):
         self.cached_accent_color = (40, 220, 100)
 
     def get_config_rows(self) -> "list[Adw.PreferencesRow]":
-        return super().get_config_rows()
+        # Call super to initialize player_selector and defaults
+        super().get_config_rows()
+        # Dial action acts as a dedicated widget: return only player_selector (excluding label_toggle, thumbnail_toggle, idle_icon_row)
+        return [self.player_selector]
 
     def on_ready(self):
         self.update_image()
