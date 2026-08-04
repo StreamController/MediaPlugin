@@ -1419,12 +1419,17 @@ class MediaDial(MediaAction):
         if isinstance(status, list):
             status = status[0]
 
-        # Target resolution 200x100
+        # Target resolution from dial input or deck controller
         canvas_size = (200, 100)
         try:
-            deck_format = self.deck_controller.deck.key_image_format()
-            if "size" in deck_format and deck_format["size"]:
-                canvas_size = deck_format["size"]
+            if hasattr(self, "get_input") and self.get_input() is not None:
+                input_size = self.get_input().get_image_size()
+                if input_size and input_size[0] > 0 and input_size[1] > 0:
+                    canvas_size = input_size
+            elif hasattr(self, "deck_controller") and self.deck_controller is not None:
+                deck_size = self.deck_controller.deck.key_image_format()["size"]
+                if deck_size and deck_size[0] > 0 and deck_size[1] > 0:
+                    canvas_size = deck_size
         except Exception:
             pass
 
@@ -1433,13 +1438,13 @@ class MediaDial(MediaAction):
         if status is None:
             idle_image = self.get_idle_icon()
             if idle_image is not None:
-                self.set_media(image=idle_image.resize((width, height)))
+                self.set_media(image=idle_image.resize((width, height)), size=1.0)
                 return
             bg = Image.new("RGBA", (width, height), (20, 20, 20, 255))
             draw = ImageDraw.Draw(bg)
-            font = self.load_font(int(height * 0.14), bold=True)
+            font = self.load_font(int(height * 0.15), bold=True)
             draw.text((width // 2, height // 2), "No Media Playing", fill=(180, 180, 180, 255), font=font, anchor="mm")
-            self.set_media(image=bg)
+            self.set_media(image=bg, size=1.0)
             return
 
         # Fetch metadata
@@ -1483,12 +1488,12 @@ class MediaDial(MediaAction):
         if bg_img:
             self.cached_accent_color = self.extract_accent_color(bg_img)
         
-        # Build background canvas
+        # Build background canvas spanning 100% of dial screen
         if bg_img:
             bg_canvas = ImageOps.fit(bg_img.convert("RGBA"), (width, height))
             enhancer = ImageEnhance.Brightness(bg_canvas)
-            bg_canvas = enhancer.enhance(0.40) # Dim background so text stands out
-            dark_overlay = Image.new("RGBA", (width, height), (0, 0, 0, 90))
+            bg_canvas = enhancer.enhance(0.45) # Fainted/dimmed background
+            dark_overlay = Image.new("RGBA", (width, height), (0, 0, 0, 80))
             bg_canvas = Image.alpha_composite(bg_canvas, dark_overlay)
         else:
             bg_canvas = Image.new("RGBA", (width, height), (25, 25, 28, 255))
@@ -1499,24 +1504,24 @@ class MediaDial(MediaAction):
         source_icon = self.get_player_source_icon(player_key)
         icon_margin_right = int(width * 0.04)
         icon_margin_top = int(height * 0.05)
-        icon_size = int(height * 0.28) # ~28px on 100px height
+        icon_size = int(height * 0.32) # ~32px on 100px height
         
         if source_icon:
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (width - icon_margin_right - icon_size, icon_margin_top), source_icon)
 
         # 2. Artist Name & Song Title (Top Left)
-        left_margin = int(width * 0.05)
-        max_title_width = width - left_margin - (icon_size + icon_margin_right * 2) - 5
+        left_margin = int(width * 0.04)
+        max_title_width = width - left_margin - (icon_size + icon_margin_right * 2) - 4
         
-        artist_font_size = max(10, int(height * 0.12))
-        song_font_size = max(12, int(height * 0.16))
+        artist_font_size = max(11, int(height * 0.14))
+        song_font_size = max(16, int(height * 0.21))
 
         artist_font = self.load_font(artist_font_size, bold=False)
         song_font = self.load_font(song_font_size, bold=True)
 
-        artist_y = int(height * 0.06)
-        song_y = artist_y + artist_font_size + int(height * 0.03)
+        artist_y = int(height * 0.05)
+        song_y = artist_y + artist_font_size + int(height * 0.02)
 
         # Artist text (truncated if needed)
         artist_text = artist
@@ -1526,7 +1531,7 @@ class MediaDial(MediaAction):
                 artist_text = artist_text[:-1]
             artist_text += ".."
         
-        draw.text((left_margin, artist_y), artist_text, fill=(220, 220, 220, 255), font=artist_font)
+        draw.text((left_margin, artist_y), artist_text, fill=(230, 230, 230, 255), font=artist_font)
 
         # Song title scrolling marquee
         if title != self.last_title:
@@ -1552,13 +1557,13 @@ class MediaDial(MediaAction):
             draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font)
 
         # 3. Progression Bar & Timestamps (Bottom)
-        bar_y = int(height * 0.60)
-        bar_height = max(6, int(height * 0.10))
+        bar_y = int(height * 0.62)
+        bar_height = max(8, int(height * 0.11))
         bar_margin = left_margin
         bar_width = width - (bar_margin * 2)
 
-        track_bg = (30, 30, 32, 230)
-        track_border = (80, 80, 85, 200)
+        track_bg = (35, 35, 38, 230)
+        track_border = (160, 160, 165, 220) # Light border outline matching rect5.png
         
         draw.rounded_rectangle(
             [bar_margin, bar_y, bar_margin + bar_width, bar_y + bar_height],
@@ -1574,7 +1579,7 @@ class MediaDial(MediaAction):
             progress_ratio = 0.0
 
         fill_width = int(bar_width * progress_ratio)
-        if fill_width > bar_height:
+        if fill_width > 2:
             accent_rgb = self.cached_accent_color
             draw.rounded_rectangle(
                 [bar_margin, bar_y, bar_margin + fill_width, bar_y + bar_height],
@@ -1582,9 +1587,9 @@ class MediaDial(MediaAction):
                 fill=accent_rgb + (255,)
             )
 
-        time_font_size = max(9, int(height * 0.11))
+        time_font_size = max(11, int(height * 0.14))
         time_font = self.load_font(time_font_size, bold=True)
-        time_y = bar_y + bar_height + int(height * 0.04)
+        time_y = bar_y + bar_height + int(height * 0.03)
 
         pos_min, pos_sec = int(position // 60), int(position % 60)
         dur_min, dur_sec = int(duration // 60), int(duration % 60)
@@ -1597,7 +1602,7 @@ class MediaDial(MediaAction):
         dur_w = dur_bbox[2] - dur_bbox[0]
         draw.text((width - bar_margin - dur_w, time_y), dur_str, fill=(255, 255, 255, 255), font=time_font)
 
-        self.set_media(image=bg_canvas)
+        self.set_media(image=bg_canvas, size=1.0)
 
 
 class MediaPlugin(PluginBase):
