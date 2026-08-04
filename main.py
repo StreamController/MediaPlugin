@@ -1356,108 +1356,7 @@ class MediaDial(MediaAction):
         self.cached_accent_color = (40, 220, 100)
 
     def get_config_rows(self) -> "list[Adw.PreferencesRow]":
-        base_rows = super().get_config_rows()
-
-        # Artist Label Settings Dropdown (Adw.ExpanderRow)
-        self.artist_expander = Adw.ExpanderRow(
-            title="Artist Label Settings",
-            subtitle="Configure font, size, outline, and X/Y position for live Artist Name"
-        )
-
-        self.artist_font_row = Adw.ActionRow(title="Font Family & Style")
-        self.artist_font_button = Gtk.FontButton()
-        self.artist_font_button.set_valign(Gtk.Align.CENTER)
-        self.artist_font_row.add_suffix(self.artist_font_button)
-
-        self.artist_size_row = Adw.SpinRow.new_with_range(min=8, max=36, step=1)
-        self.artist_size_row.set_title("Font Size (px)")
-
-        self.artist_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
-        self.artist_outline_row.set_title("Outline Width (px)")
-
-        self.artist_x_row = Adw.SpinRow.new_with_range(min=-50, max=150, step=1)
-        self.artist_x_row.set_title("X Position (px)")
-
-        self.artist_y_row = Adw.SpinRow.new_with_range(min=-20, max=80, step=1)
-        self.artist_y_row.set_title("Y Position (px)")
-
-        self.artist_expander.add_row(self.artist_font_row)
-        self.artist_expander.add_row(self.artist_size_row)
-        self.artist_expander.add_row(self.artist_outline_row)
-        self.artist_expander.add_row(self.artist_x_row)
-        self.artist_expander.add_row(self.artist_y_row)
-
-        self.load_dial_config_defaults()
-
-        self.artist_font_button.connect("font-set", self.on_change_artist_font)
-        self.artist_size_row.connect("changed", self.on_change_dial_config)
-        self.artist_size_row.connect("notify::value", self.on_change_dial_config)
-        self.artist_outline_row.connect("changed", self.on_change_dial_config)
-        self.artist_outline_row.connect("notify::value", self.on_change_dial_config)
-        self.artist_x_row.connect("changed", self.on_change_dial_config)
-        self.artist_x_row.connect("notify::value", self.on_change_dial_config)
-        self.artist_y_row.connect("changed", self.on_change_dial_config)
-        self.artist_y_row.connect("notify::value", self.on_change_dial_config)
-
-        return base_rows + [self.artist_expander]
-
-    def load_dial_config_defaults(self):
-        settings = self.get_settings()
-        if settings is None:
-            return
-
-        artist_font_desc = settings.setdefault("artist_font_desc", "DejaVu Sans Book 15")
-        artist_size = settings.setdefault("artist_font_size", 15)
-        artist_outline = settings.setdefault("artist_outline_size", 2)
-        artist_x = settings.setdefault("artist_x_offset", 6)
-        artist_y = settings.setdefault("artist_y_offset", 4)
-
-        self.set_settings(settings)
-
-        try:
-            self.artist_font_button.set_font_desc(Pango.FontDescription.from_string(artist_font_desc))
-        except Exception:
-            pass
-
-        self.artist_size_row.set_value(float(artist_size))
-        self.artist_outline_row.set_value(float(artist_outline))
-        self.artist_x_row.set_value(float(artist_x))
-        self.artist_y_row.set_value(float(artist_y))
-
-    def on_change_artist_font(self, button):
-        settings = self.get_settings()
-        if settings is None:
-            return
-        font_desc = button.get_font_desc()
-        if font_desc:
-            settings["artist_font_desc"] = font_desc.to_string()
-            size_pango = font_desc.get_size()
-            if size_pango > 0:
-                size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
-                if size > 0:
-                    settings["artist_font_size"] = size
-                    if hasattr(self, "artist_size_row"):
-                        self.artist_size_row.set_value(float(size))
-            self.set_settings(settings)
-            self.on_tick()
-            self.update_image()
-
-    def on_change_dial_config(self, *args):
-        settings = self.get_settings()
-        if settings is None:
-            return
-        if hasattr(self, "artist_size_row"):
-            settings["artist_font_size"] = int(self.artist_size_row.get_value())
-        if hasattr(self, "artist_outline_row"):
-            settings["artist_outline_size"] = int(self.artist_outline_row.get_value())
-        if hasattr(self, "artist_x_row"):
-            settings["artist_x_offset"] = int(self.artist_x_row.get_value())
-        if hasattr(self, "artist_y_row"):
-            settings["artist_y_offset"] = int(self.artist_y_row.get_value())
-
-        self.set_settings(settings)
-        self.on_tick()
-        self.update_image()
+        return super().get_config_rows()
 
     def on_ready(self):
         self.update_image()
@@ -1654,13 +1553,24 @@ class MediaDial(MediaAction):
 
         draw = ImageDraw.Draw(bg_canvas)
 
-        # Clear top native label so Artist Name renders directly from Action Artist Label Settings
-        self.set_top_label("", update=False)
+        # Update StreamController native action labels (Top slot for Artist, Center slot for Song Title)
+        self.set_top_label(artist, update=False)
         self.set_center_label(title, update=False)
+
+        # Set default left alignment for native labels if not already customized
+        try:
+            top_label_obj = self.get_state().label_manager.action_labels.get("top")
+            if top_label_obj and top_label_obj.alignment is None:
+                top_label_obj.alignment = "left"
+            center_label_obj = self.get_state().label_manager.action_labels.get("center")
+            if center_label_obj and center_label_obj.alignment is None:
+                center_label_obj.alignment = "left"
+        except Exception:
+            pass
 
         # 1. Source Icon (Top Right)
         source_icon = self.get_player_source_icon(player_key)
-        icon_margin_right = 6
+        icon_margin_right = 8
         icon_margin_top = 4
         icon_size = 22
         icon_x = width - icon_margin_right - icon_size
@@ -1668,29 +1578,6 @@ class MediaDial(MediaAction):
         if source_icon:
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
-
-        # 2. Live Artist Name Rendering (Strictly MPRIS live artist metadata using Action Artist Label Settings)
-        artist_font_desc = settings.get("artist_font_desc", "DejaVu Sans Book 15")
-        artist_font_size = int(settings.get("artist_font_size", 15))
-        artist_outline_size = int(settings.get("artist_outline_size", 2))
-        artist_x_offset = int(settings.get("artist_x_offset", 6))
-        artist_y_offset = int(settings.get("artist_y_offset", 4))
-
-        artist_font_path = pango_desc_to_font_path(artist_font_desc)
-        artist_font = self.load_truetype_font(artist_font_path, artist_font_size)
-
-        artist_text = artist
-        artist_x = artist_x_offset
-        artist_y = artist_y_offset
-        max_artist_width = max(50, icon_x - artist_x - 4)
-
-        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=artist_outline_size)
-        if (artist_bbox[2] - artist_bbox[0]) > max_artist_width:
-            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=artist_outline_size)[2] > max_artist_width:
-                artist_text = artist_text[:-1]
-            artist_text += ".."
-
-        draw.text((artist_x, artist_y), artist_text, fill=(255, 255, 255, 255), font=artist_font, stroke_width=artist_outline_size, stroke_fill=(0, 0, 0, 240))
 
         # 2. Progression Bar & Timestamps (Enlarged 22px Bold timestamps on left and right, centered progress bar)
         time_font_size = 22
