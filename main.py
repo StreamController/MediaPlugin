@@ -1553,13 +1553,24 @@ class MediaDial(MediaAction):
 
         draw = ImageDraw.Draw(bg_canvas)
 
-        # Clear native StreamController labels so custom high-res layout renders text cleanly
-        self.set_top_label("", update=False)
-        self.set_center_label("", update=False)
+        # Update StreamController native action labels (Top slot for Artist, Center slot for Song Title)
+        self.set_top_label(artist, update=False)
+        self.set_center_label(title, update=False)
+
+        # Set default left alignment for native labels if not already customized
+        try:
+            top_label_obj = self.get_state().label_manager.action_labels.get("top")
+            if top_label_obj and top_label_obj.alignment is None:
+                top_label_obj.alignment = "left"
+            center_label_obj = self.get_state().label_manager.action_labels.get("center")
+            if center_label_obj and center_label_obj.alignment is None:
+                center_label_obj.alignment = "left"
+        except Exception:
+            pass
 
         # 1. Source Icon (Top Right)
         source_icon = self.get_player_source_icon(player_key)
-        icon_margin_right = 6
+        icon_margin_right = 8
         icon_margin_top = 4
         icon_size = 22
         icon_x = width - icon_margin_right - icon_size
@@ -1568,61 +1579,12 @@ class MediaDial(MediaAction):
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
 
-        # 2. Artist Name & Song Title (6px left margin, exact 5px vertical gap, marquee scrolling for long titles)
-        left_margin = 6
-        
-        artist_font_size = 15
-        song_font_size = 20
-
-        artist_font = self.load_truetype_font("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", artist_font_size)
-        song_font = self.load_truetype_font("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", song_font_size)
-
-        artist_y = 4
-        max_artist_width = max(50, icon_x - left_margin - 4)
-
-        # Artist text (DejaVu Sans Book with 2px dark outline)
-        artist_text = artist
-        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=2)
-        if (artist_bbox[2] - artist_bbox[0]) > max_artist_width:
-            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=2)[2] > max_artist_width:
-                artist_text = artist_text[:-1]
-            artist_text += ".."
-        
-        draw.text((left_margin, artist_y), artist_text, fill=(255, 255, 255, 255), font=artist_font, stroke_width=2, stroke_fill=(0, 0, 0, 240))
-        
-        # Exact 5px gap between Artist Name and Song Name
-        artist_height = artist_bbox[3] - artist_bbox[1]
-        song_y = artist_y + artist_height + 5
-
-        # Song Title with scrolling marquee if too long to fit
-        max_song_width = width - (left_margin * 2)
-        
-        if title != self.last_title:
-            self.last_title = title
-            self.scroll_offset = 0
-
-        song_bbox = draw.textbbox((0, 0), title, font=song_font, stroke_width=2)
-        song_width = song_bbox[2] - song_bbox[0]
-
-        if song_width > max_song_width:
-            text_surf = Image.new("RGBA", (song_width + 40, song_font_size + 8), (0, 0, 0, 0))
-            t_draw = ImageDraw.Draw(text_surf)
-            t_draw.text((0, 0), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=2, stroke_fill=(0, 0, 0, 240))
-            
-            self.scroll_offset += 3
-            if self.scroll_offset > (song_width - max_song_width + 25):
-                self.scroll_offset = -12
-            
-            crop_x = max(0, int(self.scroll_offset))
-            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_song_width, song_font_size + 8))
-            bg_canvas.paste(cropped_text, (left_margin, song_y), cropped_text)
-        else:
-            draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=2, stroke_fill=(0, 0, 0, 240))
-
-        # 3. Progression Bar & Timestamps (Undimmed, bright crisp track & lightened accent color)
-        bar_y = 66
+        # 2. Progression Bar & Timestamps (Undimmed, bright crisp track & lightened accent color)
+        bar_y = 63
         bar_height = 11
+        left_margin = 8
         bar_margin = left_margin
+        bar_width = width - (bar_margin * 2)
         bar_width = width - (bar_margin * 2)
 
         track_bg = (45, 45, 52, 245)
