@@ -1579,19 +1579,43 @@ class MediaDial(MediaAction):
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
 
-        # 2. Progression Bar & Timestamps (Undimmed, bright crisp track & lightened accent color)
-        bar_y = 63
-        bar_height = 11
-        left_margin = 8
-        bar_margin = left_margin
-        bar_width = width - (bar_margin * 2)
-        bar_width = width - (bar_margin * 2)
+        # 2. Progression Bar & Timestamps (Bigger 18px timestamps on left and right, centered progress bar)
+        time_font_size = 18
+        time_font = self.load_truetype_font("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", time_font_size)
 
+        pos_min, pos_sec = int(position // 60), int(position % 60)
+        dur_min, dur_sec = int(duration // 60), int(duration % 60)
+
+        pos_str = f"{pos_min:02d}:{pos_sec:02d}"
+        dur_str = f"{dur_min:02d}:{dur_sec:02d}"
+
+        pos_bbox = draw.textbbox((0, 0), pos_str, font=time_font, stroke_width=1)
+        dur_bbox = draw.textbbox((0, 0), dur_str, font=time_font, stroke_width=1)
+        pos_w = pos_bbox[2] - pos_bbox[0]
+        dur_w = dur_bbox[2] - dur_bbox[0]
+
+        left_margin = 6
+        gap = 5
+        row_cy = 76
+        bar_height = 10
+        bar_y = row_cy - (bar_height // 2)
+
+        bar_x1 = left_margin + pos_w + gap
+        bar_x2 = width - left_margin - dur_w - gap
+        bar_width = max(20, bar_x2 - bar_x1)
+
+        # Draw left timestamp (00:00)
+        draw.text((left_margin, row_cy), pos_str, fill=(255, 255, 255, 255), font=time_font, anchor="lm", stroke_width=1, stroke_fill=(0, 0, 0, 240))
+
+        # Draw right timestamp (duration)
+        draw.text((width - left_margin, row_cy), dur_str, fill=(255, 255, 255, 255), font=time_font, anchor="rm", stroke_width=1, stroke_fill=(0, 0, 0, 240))
+
+        # Draw progress bar container
         track_bg = (45, 45, 52, 245)
         track_border = (200, 200, 210, 255)
         
         draw.rounded_rectangle(
-            [bar_margin, bar_y, bar_margin + bar_width, bar_y + bar_height],
+            [bar_x1, bar_y, bar_x2, bar_y + bar_height],
             radius=bar_height // 2,
             fill=track_bg,
             outline=track_border,
@@ -1607,26 +1631,10 @@ class MediaDial(MediaAction):
         if fill_width > 2:
             accent_rgb = self.cached_accent_color
             draw.rounded_rectangle(
-                [bar_margin, bar_y, bar_margin + fill_width, bar_y + bar_height],
+                [bar_x1, bar_y, bar_x1 + fill_width, bar_y + bar_height],
                 radius=bar_height // 2,
                 fill=accent_rgb + (255,)
             )
-
-        # Timestamps
-        time_font_size = 14
-        time_font = self.load_truetype_font("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", time_font_size)
-        time_y = bar_y + bar_height + 3
-
-        pos_min, pos_sec = int(position // 60), int(position % 60)
-        dur_min, dur_sec = int(duration // 60), int(duration % 60)
-
-        pos_str = f"{pos_min:02d}:{pos_sec:02d}"
-        dur_str = f"{dur_min:02d}:{dur_sec:02d}"
-
-        draw.text((bar_margin, time_y), pos_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=1, stroke_fill=(0, 0, 0, 240))
-        dur_bbox = draw.textbbox((0, 0), dur_str, font=time_font, stroke_width=1)
-        dur_w = dur_bbox[2] - dur_bbox[0]
-        draw.text((width - bar_margin - dur_w, time_y), dur_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=1, stroke_fill=(0, 0, 0, 240))
 
         self.set_media(image=bg_canvas, size=1.0)
 
