@@ -1511,22 +1511,22 @@ class MediaDial(MediaAction):
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
 
-        # 2. Artist Name & Song Title (2x supersampled with 2px solid black outline)
+        # 2. Artist Name & Song Title (Scaled up for bold, crisp readability matching 20-36px visual targets)
         left_margin = int(width * 0.04)
         
         max_artist_width = max(100, icon_x - left_margin - 8)
-        artist_font_size = max(26, int(height * 0.18)) # ~36px font at 2x scale
+        artist_font_size = max(34, int(height * 0.24)) # ~24px on screen (48px at 2x scale)
 
         max_song_width = width - (left_margin * 2)
-        song_font_size = max(40, int(height * 0.28))   # ~56px font at 2x scale
+        song_font_size = max(52, int(height * 0.36))   # ~36px on screen (72px at 2x scale)
 
         artist_font = self.load_font(artist_font_size, bold=False)
         song_font = self.load_font(song_font_size, bold=True)
 
-        artist_y = int(height * 0.04)
-        song_y = artist_y + artist_font_size + int(height * 0.01)
+        artist_y = int(height * 0.02)
+        song_y = artist_y + artist_font_size - int(height * 0.02)
 
-        # Artist text with 2px stroke outline
+        # Artist text with 2px stroke outline (DejaVu Sans Book)
         artist_text = artist
         artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=2)
         if (artist_bbox[2] - artist_bbox[0]) > max_artist_width:
@@ -1536,7 +1536,7 @@ class MediaDial(MediaAction):
         
         draw.text((left_margin, artist_y), artist_text, fill=(255, 255, 255, 255), font=artist_font, stroke_width=2, stroke_fill=(0, 0, 0, 255))
 
-        # Song title scrolling marquee with 2px stroke outline
+        # Song title scrolling marquee with 2px stroke outline (DejaVu Sans Bold)
         if title != self.last_title:
             self.last_title = title
             self.scroll_offset = 0
@@ -1590,9 +1590,9 @@ class MediaDial(MediaAction):
                 fill=accent_rgb + (255,)
             )
 
-        time_font_size = max(22, int(height * 0.14)) # ~28px font at 2x scale
+        time_font_size = max(28, int(height * 0.18)) # ~18px font on screen (36px at 2x scale)
         time_font = self.load_font(time_font_size, bold=True)
-        time_y = bar_y + bar_height + int(height * 0.03)
+        time_y = bar_y + bar_height + int(height * 0.02)
 
         pos_min, pos_sec = int(position // 60), int(position % 60)
         dur_min, dur_sec = int(duration // 60), int(duration % 60)
