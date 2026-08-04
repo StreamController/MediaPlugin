@@ -1553,11 +1553,19 @@ class MediaDial(MediaAction):
 
         draw = ImageDraw.Draw(bg_canvas)
 
-        # Update StreamController native action labels (Top slot for Artist, Center slot for Song Title)
+        # Format timestamps
+        pos_min, pos_sec = int(position // 60), int(position % 60)
+        dur_min, dur_sec = int(duration // 60), int(duration % 60)
+        pos_str = f"{pos_min:02d}:{pos_sec:02d}"
+        dur_str = f"{dur_min:02d}:{dur_sec:02d}"
+        time_str = f"{pos_str}                              {dur_str}"
+
+        # Update StreamController native action labels (Top for Artist, Center for Song Title, Bottom for Timestamps)
         self.set_top_label(artist, update=False)
         self.set_center_label(title, update=False)
+        self.set_bottom_label(time_str, update=False)
 
-        # Set center alignment for native labels (Top slot for Artist, Center slot for Song Title)
+        # Set center alignment for native labels
         try:
             top_label_obj = self.get_state().label_manager.action_labels.get("top")
             if top_label_obj:
@@ -1565,46 +1573,23 @@ class MediaDial(MediaAction):
             center_label_obj = self.get_state().label_manager.action_labels.get("center")
             if center_label_obj:
                 center_label_obj.alignment = "center"
+            bottom_label_obj = self.get_state().label_manager.action_labels.get("bottom")
+            if bottom_label_obj:
+                bottom_label_obj.alignment = "center"
         except Exception:
             pass
 
-        # 1. Progression Bar & Timestamps (Enlarged 22px Bold timestamps on left and right, centered progress bar)
-        time_font_size = 22
-        time_font = self.load_truetype_font("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", time_font_size)
+        # Progression Bar (Clean bar above bottom label)
+        bar_y = 66
+        bar_height = 8
+        bar_margin = 10
+        bar_width = width - (bar_margin * 2)
 
-        pos_min, pos_sec = int(position // 60), int(position % 60)
-        dur_min, dur_sec = int(duration // 60), int(duration % 60)
-
-        pos_str = f"{pos_min:02d}:{pos_sec:02d}"
-        dur_str = f"{dur_min:02d}:{dur_sec:02d}"
-
-        pos_bbox = draw.textbbox((0, 0), pos_str, font=time_font, stroke_width=1)
-        dur_bbox = draw.textbbox((0, 0), dur_str, font=time_font, stroke_width=1)
-        pos_w = pos_bbox[2] - pos_bbox[0]
-        dur_w = dur_bbox[2] - dur_bbox[0]
-
-        left_margin = 6
-        gap = 4
-        row_cy = 76
-        bar_height = 10
-        bar_y = row_cy - (bar_height // 2)
-
-        bar_x1 = left_margin + pos_w + gap
-        bar_x2 = width - left_margin - dur_w - gap
-        bar_width = max(15, bar_x2 - bar_x1)
-
-        # Draw left timestamp (00:00)
-        draw.text((left_margin, row_cy), pos_str, fill=(255, 255, 255, 255), font=time_font, anchor="lm", stroke_width=1, stroke_fill=(0, 0, 0, 240))
-
-        # Draw right timestamp (duration)
-        draw.text((width - left_margin, row_cy), dur_str, fill=(255, 255, 255, 255), font=time_font, anchor="rm", stroke_width=1, stroke_fill=(0, 0, 0, 240))
-
-        # Draw progress bar container
         track_bg = (45, 45, 52, 245)
         track_border = (200, 200, 210, 255)
         
         draw.rounded_rectangle(
-            [bar_x1, bar_y, bar_x2, bar_y + bar_height],
+            [bar_margin, bar_y, bar_margin + bar_width, bar_y + bar_height],
             radius=bar_height // 2,
             fill=track_bg,
             outline=track_border,
@@ -1620,7 +1605,7 @@ class MediaDial(MediaAction):
         if fill_width > 2:
             accent_rgb = self.cached_accent_color
             draw.rounded_rectangle(
-                [bar_x1, bar_y, bar_x1 + fill_width, bar_y + bar_height],
+                [bar_margin, bar_y, bar_margin + fill_width, bar_y + bar_height],
                 radius=bar_height // 2,
                 fill=accent_rgb + (255,)
             )
