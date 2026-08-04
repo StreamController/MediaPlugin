@@ -1557,14 +1557,14 @@ class MediaDial(MediaAction):
         self.set_top_label(artist, update=False)
         self.set_center_label(title, update=False)
 
-        # Set default left alignment for native labels if not already customized
+        # Set center alignment for native labels (Top slot for Artist, Center slot for Song Title)
         try:
             top_label_obj = self.get_state().label_manager.action_labels.get("top")
-            if top_label_obj and top_label_obj.alignment is None:
-                top_label_obj.alignment = "left"
+            if top_label_obj:
+                top_label_obj.alignment = "center"
             center_label_obj = self.get_state().label_manager.action_labels.get("center")
-            if center_label_obj and center_label_obj.alignment is None:
-                center_label_obj.alignment = "left"
+            if center_label_obj:
+                center_label_obj.alignment = "center"
         except Exception:
             pass
 
