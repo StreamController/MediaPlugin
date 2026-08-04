@@ -17,7 +17,7 @@ from gi.repository import Gtk, Adw, GLib
 import sys
 import os
 import io
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageOps, ImageDraw, ImageFont
 
 import globals as gl
 
@@ -1314,6 +1314,292 @@ class ThumbnailBackground(MediaAction):
         """
         self.clear()
 
+
+class MediaDial(MediaAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scroll_offset = 0
+        self.last_title = ""
+        self.cached_accent_color = (29, 185, 84)
+
+    def on_ready(self):
+        self.update_image()
+
+    def on_tick(self):
+        self.update_image()
+
+    def event_callback(self, event, data: dict = None):
+        if event == Input.Dial.Events.TURN_CW:
+            self.plugin_base.mc.next(self.get_player_name())
+            self.update_image()
+        elif event == Input.Dial.Events.TURN_CCW:
+            self.plugin_base.mc.previous(self.get_player_name())
+            self.update_image()
+        elif event in [Input.Dial.Events.DOWN, Input.Key.Events.DOWN]:
+            self.plugin_base.mc.toggle(self.get_player_name())
+            self.update_image()
+        else:
+            super().event_callback(event, data)
+
+    def on_key_down(self):
+        self.plugin_base.mc.toggle(self.get_player_name())
+        self.update_image()
+
+    def extract_accent_color(self, thumbnail: Image.Image) -> tuple[int, int, int]:
+        if thumbnail is None:
+            return (29, 185, 84)
+        try:
+            small = thumbnail.convert("RGB").resize((32, 32))
+            pixels = list(small.getdata())
+            best_color = None
+            max_sat = -1.0
+            
+            for r, g, b in pixels:
+                brightness = 0.299 * r + 0.587 * g + 0.114 * b
+                if brightness < 35 or brightness > 225:
+                    continue
+                max_c = max(r, g, b)
+                min_c = min(r, g, b)
+                if max_c == 0:
+                    continue
+                sat = (max_c - min_c) / max_c
+                if sat > max_sat:
+                    max_sat = sat
+                    best_color = (r, g, b)
+
+            if best_color and max_sat > 0.15:
+                return best_color
+
+            mid_pixels = [p for p in pixels if 40 <= (0.299*p[0]+0.587*p[1]+0.114*p[2]) <= 220]
+            if mid_pixels:
+                avg_r = sum(p[0] for p in mid_pixels) // len(mid_pixels)
+                avg_g = sum(p[1] for p in mid_pixels) // len(mid_pixels)
+                avg_b = sum(p[2] for p in mid_pixels) // len(mid_pixels)
+                return (avg_r, avg_g, avg_b)
+        except Exception:
+            pass
+        return (29, 185, 84)
+
+    def load_font(self, font_size: int, bold: bool = False):
+        font_paths = [
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu[wdth,wght].ttf",
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu-M.ttf",
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf" if bold else "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+        ]
+        for p in font_paths:
+            if os.path.exists(p):
+                try:
+                    return ImageFont.truetype(p, font_size)
+                except Exception:
+                    pass
+        return ImageFont.load_default()
+
+    def get_player_source_icon(self, player_key: str) -> Image.Image | None:
+        if not player_key:
+            player_key = "default"
+        players_dir = os.path.join(self.plugin_base.PATH, "assets", "players")
+        if os.path.isdir(players_dir):
+            for fname in os.listdir(players_dir):
+                name_no_ext = os.path.splitext(fname)[0].lower()
+                if name_no_ext == player_key.lower() or name_no_ext in player_key.lower() or player_key.lower() in name_no_ext:
+                    try:
+                        return Image.open(os.path.join(players_dir, fname))
+                    except Exception:
+                        pass
+        return None
+
+    def update_image(self):
+        if self.get_settings() is None:
+            return
+
+        player_name = self.get_player_name()
+        status = self.plugin_base.mc.status(player_name)
+        if isinstance(status, list):
+            status = status[0]
+
+        # Target resolution 200x100
+        canvas_size = (200, 100)
+        try:
+            deck_format = self.deck_controller.deck.key_image_format()
+            if "size" in deck_format and deck_format["size"]:
+                canvas_size = deck_format["size"]
+        except Exception:
+            pass
+
+        width, height = canvas_size
+
+        if status is None:
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                self.set_media(image=idle_image.resize((width, height)))
+                return
+            bg = Image.new("RGBA", (width, height), (20, 20, 20, 255))
+            draw = ImageDraw.Draw(bg)
+            font = self.load_font(int(height * 0.14), bold=True)
+            draw.text((width // 2, height // 2), "No Media Playing", fill=(180, 180, 180, 255), font=font, anchor="mm")
+            self.set_media(image=bg)
+            return
+
+        # Fetch metadata
+        title = self.plugin_base.mc.title(player_name)
+        if isinstance(title, list): title = title[0] if title else ""
+        title = str(title) if title else "Unknown Title"
+
+        artist = self.plugin_base.mc.artist(player_name)
+        if isinstance(artist, list): artist = artist[0] if artist else ""
+        artist = str(artist) if artist else "Unknown Artist"
+
+        position = self.plugin_base.mc.position(player_name)
+        if isinstance(position, list): position = position[0] if position else 0.0
+        position = float(position or 0.0)
+
+        duration = self.plugin_base.mc.duration(player_name)
+        if isinstance(duration, list): duration = duration[0] if duration else 0.0
+        duration = float(duration or 0.0)
+
+        player_key = self.plugin_base.mc.player_key(player_name)
+        if isinstance(player_key, list): player_key = player_key[0] if player_key else ""
+
+        # Album thumbnail
+        thumbnail = self.plugin_base.mc.thumbnail(player_name)
+        if isinstance(thumbnail, list): thumbnail = thumbnail[0]
+
+        bg_img = None
+        if thumbnail:
+            if isinstance(thumbnail, io.BytesIO):
+                try:
+                    bg_img = Image.open(thumbnail)
+                except Exception:
+                    pass
+            elif isinstance(thumbnail, str) and os.path.exists(thumbnail):
+                try:
+                    bg_img = Image.open(thumbnail)
+                except Exception:
+                    pass
+
+        # Calculate dynamic accent color
+        if bg_img:
+            self.cached_accent_color = self.extract_accent_color(bg_img)
+        
+        # Build background canvas
+        if bg_img:
+            bg_canvas = ImageOps.fit(bg_img.convert("RGBA"), (width, height))
+            enhancer = ImageEnhance.Brightness(bg_canvas)
+            bg_canvas = enhancer.enhance(0.40) # Dim background so text stands out
+            dark_overlay = Image.new("RGBA", (width, height), (0, 0, 0, 90))
+            bg_canvas = Image.alpha_composite(bg_canvas, dark_overlay)
+        else:
+            bg_canvas = Image.new("RGBA", (width, height), (25, 25, 28, 255))
+
+        draw = ImageDraw.Draw(bg_canvas)
+
+        # 1. Source Icon (Top Right)
+        source_icon = self.get_player_source_icon(player_key)
+        icon_margin_right = int(width * 0.04)
+        icon_margin_top = int(height * 0.05)
+        icon_size = int(height * 0.28) # ~28px on 100px height
+        
+        if source_icon:
+            source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+            bg_canvas.paste(source_icon, (width - icon_margin_right - icon_size, icon_margin_top), source_icon)
+
+        # 2. Artist Name & Song Title (Top Left)
+        left_margin = int(width * 0.05)
+        max_title_width = width - left_margin - (icon_size + icon_margin_right * 2) - 5
+        
+        artist_font_size = max(10, int(height * 0.12))
+        song_font_size = max(12, int(height * 0.16))
+
+        artist_font = self.load_font(artist_font_size, bold=False)
+        song_font = self.load_font(song_font_size, bold=True)
+
+        artist_y = int(height * 0.06)
+        song_y = artist_y + artist_font_size + int(height * 0.03)
+
+        # Artist text (truncated if needed)
+        artist_text = artist
+        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font)
+        if (artist_bbox[2] - artist_bbox[0]) > max_title_width:
+            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font)[2] > max_title_width:
+                artist_text = artist_text[:-1]
+            artist_text += ".."
+        
+        draw.text((left_margin, artist_y), artist_text, fill=(220, 220, 220, 255), font=artist_font)
+
+        # Song title scrolling marquee
+        if title != self.last_title:
+            self.last_title = title
+            self.scroll_offset = 0
+
+        song_bbox = draw.textbbox((0, 0), title, font=song_font)
+        song_width = song_bbox[2] - song_bbox[0]
+
+        if song_width > max_title_width:
+            text_surf = Image.new("RGBA", (song_width + 40, song_font_size + 6), (0, 0, 0, 0))
+            t_draw = ImageDraw.Draw(text_surf)
+            t_draw.text((0, 0), title, fill=(255, 255, 255, 255), font=song_font)
+            
+            self.scroll_offset += 3
+            if self.scroll_offset > (song_width - max_title_width + 30):
+                self.scroll_offset = -10
+            
+            crop_x = max(0, int(self.scroll_offset))
+            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_title_width, song_font_size + 6))
+            bg_canvas.paste(cropped_text, (left_margin, song_y), cropped_text)
+        else:
+            draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font)
+
+        # 3. Progression Bar & Timestamps (Bottom)
+        bar_y = int(height * 0.60)
+        bar_height = max(6, int(height * 0.10))
+        bar_margin = left_margin
+        bar_width = width - (bar_margin * 2)
+
+        track_bg = (30, 30, 32, 230)
+        track_border = (80, 80, 85, 200)
+        
+        draw.rounded_rectangle(
+            [bar_margin, bar_y, bar_margin + bar_width, bar_y + bar_height],
+            radius=bar_height // 2,
+            fill=track_bg,
+            outline=track_border,
+            width=1
+        )
+
+        if duration > 0:
+            progress_ratio = max(0.0, min(1.0, position / duration))
+        else:
+            progress_ratio = 0.0
+
+        fill_width = int(bar_width * progress_ratio)
+        if fill_width > bar_height:
+            accent_rgb = self.cached_accent_color
+            draw.rounded_rectangle(
+                [bar_margin, bar_y, bar_margin + fill_width, bar_y + bar_height],
+                radius=bar_height // 2,
+                fill=accent_rgb + (255,)
+            )
+
+        time_font_size = max(9, int(height * 0.11))
+        time_font = self.load_font(time_font_size, bold=True)
+        time_y = bar_y + bar_height + int(height * 0.04)
+
+        pos_min, pos_sec = int(position // 60), int(position % 60)
+        dur_min, dur_sec = int(duration // 60), int(duration % 60)
+
+        pos_str = f"{pos_min:02d}:{pos_sec:02d}"
+        dur_str = f"{dur_min:02d}:{dur_sec:02d}"
+
+        draw.text((bar_margin, time_y), pos_str, fill=(255, 255, 255, 255), font=time_font)
+        dur_bbox = draw.textbbox((0, 0), dur_str, font=time_font)
+        dur_w = dur_bbox[2] - dur_bbox[0]
+        draw.text((width - bar_margin - dur_w, time_y), dur_str, fill=(255, 255, 255, 255), font=time_font)
+
+        self.set_media(image=bg_canvas)
+
+
 class MediaPlugin(PluginBase):
     def __init__(self):
         super().__init__()
@@ -1422,6 +1708,19 @@ class MediaPlugin(PluginBase):
             }
         )
         self.add_action_holder(self.thumbnail_holder)
+
+        self.dial_holder = ActionHolder(
+            plugin_base=self,
+            action_base=MediaDial, # type: ignore[arg-type]
+            action_id_suffix="MediaDial",
+            action_name=self.lm.get("actions.dial.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNTESTED
+            }
+        )
+        self.add_action_holder(self.dial_holder)
 
         self.register(
             plugin_name=self.lm.get("plugin.name"),

@@ -6,6 +6,7 @@
     "actions.next.name": "Nächster Titel",
     "actions.previous.name": "Vorheriger Titel",
     "actions.info.name": "Info",
+    "actions.dial.name": "Medien Dial",
     "actions.media-action.bind-to-player.label": "An App binden",
     "actions.media-action.bind-to-player.subtitle": "Die zu steuende Medienanwendung auswählen",
     "actions.media-action.show-name-switch.label": "Den Titel des spielenden Titels anzeigen",

@@ -241,7 +241,13 @@ class MediaController:
             try:
                 properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
                 metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
-                titles.append(str(metadata['xesam:artist'][0]))
+                artist_val = metadata['xesam:artist']
+                if isinstance(artist_val, (list, tuple, dbus.Array)) and len(artist_val) > 0:
+                    titles.append(str(artist_val[0]))
+                elif isinstance(artist_val, str):
+                    titles.append(str(artist_val))
+                else:
+                    titles.append(None)
             except (KeyError, IndexError) as e:
                 titles.append(None)
             except dbus.exceptions.DBusException as e:
@@ -249,6 +255,71 @@ class MediaController:
                 titles.append(None)
 
         return self.compress_list(titles)
+
+    def duration(self, player_name: str = None) -> list[float]:
+        ifaces = self.get_matching_ifaces(player_name)
+        durations = []
+        for iface in ifaces:
+            try:
+                properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
+                metadata = properties.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
+                if 'mpris:length' in metadata:
+                    durations.append(float(metadata['mpris:length']) / 1000000.0)
+                else:
+                    durations.append(0.0)
+            except Exception as e:
+                durations.append(0.0)
+
+        return self.compress_list(durations)
+
+    def position(self, player_name: str = None) -> list[float]:
+        ifaces = self.get_matching_ifaces(player_name)
+        positions = []
+        for iface in ifaces:
+            try:
+                properties = dbus.Interface(iface, 'org.freedesktop.DBus.Properties')
+                pos_us = properties.Get('org.mpris.MediaPlayer2.Player', 'Position')
+                positions.append(float(pos_us) / 1000000.0)
+            except Exception as e:
+                positions.append(0.0)
+
+        return self.compress_list(positions)
+
+    def player_key(self, player_name: str = None) -> list[str]:
+        self.update_players()
+        keys = []
+        for player in self.mpris_players:
+            try:
+                properties = dbus.Interface(player, 'org.freedesktop.DBus.Properties')
+                identity = str(properties.Get('org.mpris.MediaPlayer2', 'Identity')).lower()
+                desktop_entry = ""
+                try:
+                    desktop_entry = str(properties.Get('org.mpris.MediaPlayer2', 'DesktopEntry')).lower()
+                except Exception:
+                    pass
+
+                if player_name not in [None, ""] and properties.Get('org.mpris.MediaPlayer2', 'Identity') != player_name:
+                    continue
+
+                combined = f"{identity} {desktop_entry} {str(player.bus_name)}".lower()
+                if "spotify" in combined:
+                    keys.append("spotify")
+                elif "chrome" in combined or "chromium" in combined:
+                    keys.append("chrome")
+                elif "firefox" in combined:
+                    keys.append("firefox")
+                elif "vlc" in combined:
+                    keys.append("vlc")
+                elif "rhythmbox" in combined:
+                    keys.append("rhythmbox")
+                elif desktop_entry:
+                    keys.append(desktop_entry)
+                else:
+                    keys.append(identity)
+            except Exception as e:
+                keys.append(None)
+
+        return self.compress_list(keys)
     
     def thumbnail(self, player_name: str = None) -> list[str]:
         ifaces = self.get_matching_ifaces(player_name)
