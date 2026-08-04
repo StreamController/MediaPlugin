@@ -1579,8 +1579,8 @@ class MediaDial(MediaAction):
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
 
-        # 2. Progression Bar & Timestamps (Bigger 18px timestamps on left and right, centered progress bar)
-        time_font_size = 18
+        # 2. Progression Bar & Timestamps (Enlarged 22px Bold timestamps on left and right, centered progress bar)
+        time_font_size = 22
         time_font = self.load_truetype_font("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", time_font_size)
 
         pos_min, pos_sec = int(position // 60), int(position % 60)
@@ -1595,14 +1595,14 @@ class MediaDial(MediaAction):
         dur_w = dur_bbox[2] - dur_bbox[0]
 
         left_margin = 6
-        gap = 5
+        gap = 4
         row_cy = 76
         bar_height = 10
         bar_y = row_cy - (bar_height // 2)
 
         bar_x1 = left_margin + pos_w + gap
         bar_x2 = width - left_margin - dur_w - gap
-        bar_width = max(20, bar_x2 - bar_x1)
+        bar_width = max(15, bar_x2 - bar_x1)
 
         # Draw left timestamp (00:00)
         draw.text((left_margin, row_cy), pos_str, fill=(255, 255, 255, 255), font=time_font, anchor="lm", stroke_width=1, stroke_fill=(0, 0, 0, 240))
@@ -1636,7 +1636,16 @@ class MediaDial(MediaAction):
                 fill=accent_rgb + (255,)
             )
 
-        self.set_media(image=bg_canvas, size=1.0)
+        # Apply rounded corner mask to the entire canvas (radius = 12px)
+        corner_radius = 12
+        mask = Image.new("L", (width, height), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.rounded_rectangle([0, 0, width, height], radius=corner_radius, fill=255)
+
+        final_canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        final_canvas.paste(bg_canvas, (0, 0), mask)
+
+        self.set_media(image=final_canvas, size=1.0)
 
 
 class MediaPlugin(PluginBase):
