@@ -1568,18 +1568,7 @@ class MediaDial(MediaAction):
         except Exception:
             pass
 
-        # 1. Source Icon (Top Right)
-        source_icon = self.get_player_source_icon(player_key)
-        icon_margin_right = 8
-        icon_margin_top = 4
-        icon_size = 22
-        icon_x = width - icon_margin_right - icon_size
-        
-        if source_icon:
-            source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
-            bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
-
-        # 2. Progression Bar & Timestamps (Enlarged 22px Bold timestamps on left and right, centered progress bar)
+        # 1. Progression Bar & Timestamps (Enlarged 22px Bold timestamps on left and right, centered progress bar)
         time_font_size = 22
         time_font = self.load_truetype_font("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", time_font_size)
 
