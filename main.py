@@ -1396,11 +1396,15 @@ class MediaDial(MediaAction):
 
         self.artist_font_button.connect("font-set", self.on_change_artist_font)
         self.artist_size_row.connect("changed", self.on_change_dial_config)
+        self.artist_size_row.connect("notify::value", self.on_change_dial_config)
         self.artist_outline_row.connect("changed", self.on_change_dial_config)
+        self.artist_outline_row.connect("notify::value", self.on_change_dial_config)
 
         self.song_font_button.connect("font-set", self.on_change_song_font)
         self.song_size_row.connect("changed", self.on_change_dial_config)
+        self.song_size_row.connect("notify::value", self.on_change_dial_config)
         self.song_outline_row.connect("changed", self.on_change_dial_config)
+        self.song_outline_row.connect("notify::value", self.on_change_dial_config)
 
         return base_rows + [
             self.artist_font_row,
