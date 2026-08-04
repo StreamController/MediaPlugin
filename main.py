@@ -1356,143 +1356,7 @@ class MediaDial(MediaAction):
         self.cached_accent_color = (40, 220, 100)
 
     def get_config_rows(self) -> "list[Adw.PreferencesRow]":
-        base_rows = super().get_config_rows()
-
-        # Artist font configuration using native Gtk.FontButton + SpinRow for Font Size & Outline Width
-        self.artist_font_row = Adw.ActionRow(
-            title="Artist Font Family & Style",
-            subtitle="Click button to choose font family and style"
-        )
-        self.artist_font_button = Gtk.FontButton()
-        self.artist_font_button.set_valign(Gtk.Align.CENTER)
-        self.artist_font_row.add_suffix(self.artist_font_button)
-
-        self.artist_size_row = Adw.SpinRow.new_with_range(min=8, max=36, step=1)
-        self.artist_size_row.set_title("Artist Font Size")
-        self.artist_size_row.set_subtitle("Font size in pixels on 200x100 dial (e.g. 14px)")
-
-        self.artist_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
-        self.artist_outline_row.set_title("Artist Outline Width")
-        self.artist_outline_row.set_subtitle("Outline width in pixels")
-
-        # Song font configuration using native Gtk.FontButton + SpinRow for Font Size & Outline Width
-        self.song_font_row = Adw.ActionRow(
-            title="Song Font Family & Style",
-            subtitle="Click button to choose font family and style"
-        )
-        self.song_font_button = Gtk.FontButton()
-        self.song_font_button.set_valign(Gtk.Align.CENTER)
-        self.song_font_row.add_suffix(self.song_font_button)
-
-        self.song_size_row = Adw.SpinRow.new_with_range(min=8, max=46, step=1)
-        self.song_size_row.set_title("Song Font Size")
-        self.song_size_row.set_subtitle("Font size in pixels on 200x100 dial (e.g. 20px)")
-
-        self.song_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
-        self.song_outline_row.set_title("Song Outline Width")
-        self.song_outline_row.set_subtitle("Outline width in pixels")
-
-        self.load_dial_config_defaults()
-
-        self.artist_font_button.connect("font-set", self.on_change_artist_font)
-        self.artist_size_row.connect("changed", self.on_change_dial_config)
-        self.artist_size_row.connect("notify::value", self.on_change_dial_config)
-        self.artist_outline_row.connect("changed", self.on_change_dial_config)
-        self.artist_outline_row.connect("notify::value", self.on_change_dial_config)
-
-        self.song_font_button.connect("font-set", self.on_change_song_font)
-        self.song_size_row.connect("changed", self.on_change_dial_config)
-        self.song_size_row.connect("notify::value", self.on_change_dial_config)
-        self.song_outline_row.connect("changed", self.on_change_dial_config)
-        self.song_outline_row.connect("notify::value", self.on_change_dial_config)
-
-        return base_rows + [
-            self.artist_font_row,
-            self.artist_size_row,
-            self.artist_outline_row,
-            self.song_font_row,
-            self.song_size_row,
-            self.song_outline_row
-        ]
-
-    def load_dial_config_defaults(self):
-        settings = self.get_settings()
-        if settings is None:
-            return
-
-        artist_font_desc = settings.setdefault("artist_font_desc", "DejaVu Sans Book 18")
-        artist_size = settings.setdefault("artist_font_size", 18)
-        artist_outline = settings.setdefault("artist_outline_size", 2)
-
-        song_font_desc = settings.setdefault("song_font_desc", "DejaVu Sans Bold 30")
-        song_size = settings.setdefault("song_font_size", 30)
-        song_outline = settings.setdefault("song_outline_size", 2)
-
-        self.set_settings(settings)
-
-        try:
-            self.artist_font_button.set_font_desc(Pango.FontDescription.from_string(artist_font_desc))
-        except Exception:
-            pass
-
-        try:
-            self.song_font_button.set_font_desc(Pango.FontDescription.from_string(song_font_desc))
-        except Exception:
-            pass
-
-        self.artist_size_row.set_value(float(artist_size))
-        self.artist_outline_row.set_value(float(artist_outline))
-        self.song_size_row.set_value(float(song_size))
-        self.song_outline_row.set_value(float(song_outline))
-
-    def on_change_artist_font(self, button):
-        settings = self.get_settings()
-        if settings is None:
-            return
-        font_desc = button.get_font_desc()
-        if font_desc:
-            settings["artist_font_desc"] = font_desc.to_string()
-            size_pango = font_desc.get_size()
-            if size_pango > 0:
-                size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
-                if size > 0:
-                    settings["artist_font_size"] = size
-                    if hasattr(self, "artist_size_row"):
-                        self.artist_size_row.set_value(float(size))
-            self.set_settings(settings)
-            self.update_image()
-
-    def on_change_song_font(self, button):
-        settings = self.get_settings()
-        if settings is None:
-            return
-        font_desc = button.get_font_desc()
-        if font_desc:
-            settings["song_font_desc"] = font_desc.to_string()
-            size_pango = font_desc.get_size()
-            if size_pango > 0:
-                size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
-                if size > 0:
-                    settings["song_font_size"] = size
-                    if hasattr(self, "song_size_row"):
-                        self.song_size_row.set_value(float(size))
-            self.set_settings(settings)
-            self.update_image()
-
-    def on_change_dial_config(self, *args):
-        settings = self.get_settings()
-        if settings is None:
-            return
-        if hasattr(self, "artist_size_row"):
-            settings["artist_font_size"] = int(self.artist_size_row.get_value())
-        if hasattr(self, "artist_outline_row"):
-            settings["artist_outline_size"] = int(self.artist_outline_row.get_value())
-        if hasattr(self, "song_size_row"):
-            settings["song_font_size"] = int(self.song_size_row.get_value())
-        if hasattr(self, "song_outline_row"):
-            settings["song_outline_size"] = int(self.song_outline_row.get_value())
-        self.set_settings(settings)
-        self.update_image()
+        return super().get_config_rows()
 
     def on_ready(self):
         self.update_image()
@@ -1689,6 +1553,21 @@ class MediaDial(MediaAction):
 
         draw = ImageDraw.Draw(bg_canvas)
 
+        # Update StreamController native action labels (Top slot for Artist, Center slot for Song Title)
+        self.set_top_label(artist, update=False)
+        self.set_center_label(title, update=False)
+
+        # Set default left alignment for native labels if not already customized
+        try:
+            top_label_obj = self.get_state().label_manager.action_labels.get("top")
+            if top_label_obj and top_label_obj.alignment is None:
+                top_label_obj.alignment = "left"
+            center_label_obj = self.get_state().label_manager.action_labels.get("center")
+            if center_label_obj and center_label_obj.alignment is None:
+                center_label_obj.alignment = "left"
+        except Exception:
+            pass
+
         # 1. Source Icon (Top Right)
         source_icon = self.get_player_source_icon(player_key)
         icon_margin_right = 8
@@ -1700,54 +1579,12 @@ class MediaDial(MediaAction):
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
 
-        # 2. Artist Name & Song Title (Independent Configuration)
-        left_margin = 8
-        
-        # Artist Name sits at top-left beside the source icon
-        max_artist_width = max(50, icon_x - left_margin - 4)
-        artist_y = 4
-
-        # Artist text with independent outline and font settings
-        artist_text = artist
-        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=artist_outline_size)
-        if (artist_bbox[2] - artist_bbox[0]) > max_artist_width:
-            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=artist_outline_size)[2] > max_artist_width:
-                artist_text = artist_text[:-1]
-            artist_text += ".."
-        
-        draw.text((left_margin, artist_y), artist_text, fill=(255, 255, 255, 255), font=artist_font, stroke_width=artist_outline_size, stroke_fill=(0, 0, 0, 240))
-
-        # Song Name sits below Artist Name and spans full width underneath source icon level
-        max_song_width = width - (left_margin * 2)
-        song_y = artist_y + artist_font_size + 1
-
-        # Song title scrolling marquee with independent outline and font settings
-        if title != self.last_title:
-            self.last_title = title
-            self.scroll_offset = 0
-
-        song_bbox = draw.textbbox((0, 0), title, font=song_font, stroke_width=song_outline_size)
-        song_width = song_bbox[2] - song_bbox[0]
-
-        if song_width > max_song_width:
-            text_surf = Image.new("RGBA", (song_width + 40, song_font_size + 8), (0, 0, 0, 0))
-            t_draw = ImageDraw.Draw(text_surf)
-            t_draw.text((0, 0), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=song_outline_size, stroke_fill=(0, 0, 0, 240))
-            
-            self.scroll_offset += 3
-            if self.scroll_offset > (song_width - max_song_width + 20):
-                self.scroll_offset = -10
-            
-            crop_x = max(0, int(self.scroll_offset))
-            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_song_width, song_font_size + 8))
-            bg_canvas.paste(cropped_text, (left_margin, song_y), cropped_text)
-        else:
-            draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=song_outline_size, stroke_fill=(0, 0, 0, 240))
-
-        # 3. Progression Bar & Timestamps (Undimmed, bright crisp track & lightened accent color)
+        # 2. Progression Bar & Timestamps (Undimmed, bright crisp track & lightened accent color)
         bar_y = 63
         bar_height = 11
+        left_margin = 8
         bar_margin = left_margin
+        bar_width = width - (bar_margin * 2)
         bar_width = width - (bar_margin * 2)
 
         track_bg = (45, 45, 52, 245)
