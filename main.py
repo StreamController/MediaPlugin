@@ -1418,32 +1418,33 @@ class MediaDial(MediaAction):
         if isinstance(status, list):
             status = status[0]
 
-        # Target resolution from dial input or deck controller
-        canvas_size = (200, 100)
+        # Target resolution with 2x supersampling for razor-sharp vector font rendering
+        base_size = (200, 100)
         try:
             if hasattr(self, "get_input") and self.get_input() is not None:
                 input_size = self.get_input().get_image_size()
                 if input_size and input_size[0] > 0 and input_size[1] > 0:
-                    canvas_size = input_size
+                    base_size = input_size
             elif hasattr(self, "deck_controller") and self.deck_controller is not None:
                 deck_size = self.deck_controller.deck.key_image_format()["size"]
                 if deck_size and deck_size[0] > 0 and deck_size[1] > 0:
-                    canvas_size = deck_size
+                    base_size = deck_size
         except Exception:
             pass
 
-        width, height = canvas_size
+        scale = 2
+        width, height = base_size[0] * scale, base_size[1] * scale
 
         if status is None:
             idle_image = self.get_idle_icon()
             if idle_image is not None:
-                self.set_media(image=idle_image.resize((width, height)), size=1.0)
+                self.set_media(image=idle_image.resize(base_size, Image.Resampling.LANCZOS), size=1.0)
                 return
             bg = Image.new("RGBA", (width, height), (20, 20, 20, 255))
             draw = ImageDraw.Draw(bg)
             font = self.load_font(int(height * 0.15), bold=True)
-            draw.text((width // 2, height // 2), "No Media Playing", fill=(180, 180, 180, 255), font=font, anchor="mm")
-            self.set_media(image=bg, size=1.0)
+            draw.text((width // 2, height // 2), "No Media Playing", fill=(180, 180, 180, 255), font=font, anchor="mm", stroke_width=2, stroke_fill=(0, 0, 0, 255))
+            self.set_media(image=bg.resize(base_size, Image.Resampling.LANCZOS), size=1.0)
             return
 
         # Fetch metadata
@@ -1487,11 +1488,11 @@ class MediaDial(MediaAction):
         if bg_img:
             self.cached_accent_color = self.extract_accent_color(bg_img)
         
-        # Build background canvas spanning 100% of dial screen
+        # Build background canvas at 2x resolution
         if bg_img:
             bg_canvas = ImageOps.fit(bg_img.convert("RGBA"), (width, height))
             enhancer = ImageEnhance.Brightness(bg_canvas)
-            bg_canvas = enhancer.enhance(0.55) # Increased brightness by 10%
+            bg_canvas = enhancer.enhance(0.55)
             dark_overlay = Image.new("RGBA", (width, height), (0, 0, 0, 60))
             bg_canvas = Image.alpha_composite(bg_canvas, dark_overlay)
         else:
@@ -1503,23 +1504,21 @@ class MediaDial(MediaAction):
         source_icon = self.get_player_source_icon(player_key)
         icon_margin_right = int(width * 0.04)
         icon_margin_top = int(height * 0.04)
-        icon_size = int(height * 0.22) # ~22px on 100px height
+        icon_size = int(height * 0.22)
         icon_x = width - icon_margin_right - icon_size
         
         if source_icon:
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
 
-        # 2. Artist Name & Song Title (Layout matched to g14212.png)
+        # 2. Artist Name & Song Title (2x supersampled with 2px solid black outline)
         left_margin = int(width * 0.04)
         
-        # Artist Name sits at top-left beside the source icon
-        max_artist_width = max(50, icon_x - left_margin - 4)
-        artist_font_size = max(14, int(height * 0.18)) # ~18px font on 100px canvas (increased size)
+        max_artist_width = max(100, icon_x - left_margin - 8)
+        artist_font_size = max(26, int(height * 0.18)) # ~36px font at 2x scale
 
-        # Song Name sits below Artist Name and spans full width underneath the source icon level
         max_song_width = width - (left_margin * 2)
-        song_font_size = max(20, int(height * 0.28))   # ~28px font on 100px canvas (massive bold text)
+        song_font_size = max(40, int(height * 0.28))   # ~56px font at 2x scale
 
         artist_font = self.load_font(artist_font_size, bold=False)
         song_font = self.load_font(song_font_size, bold=True)
@@ -1527,54 +1526,54 @@ class MediaDial(MediaAction):
         artist_y = int(height * 0.04)
         song_y = artist_y + artist_font_size + int(height * 0.01)
 
-        # Artist text (1px outline stroke + truncation beside top-right icon if needed)
+        # Artist text with 2px stroke outline
         artist_text = artist
-        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=1)
+        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=2)
         if (artist_bbox[2] - artist_bbox[0]) > max_artist_width:
-            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=1)[2] > max_artist_width:
+            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=2)[2] > max_artist_width:
                 artist_text = artist_text[:-1]
             artist_text += ".."
         
-        draw.text((left_margin, artist_y), artist_text, fill=(240, 240, 240, 255), font=artist_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
+        draw.text((left_margin, artist_y), artist_text, fill=(255, 255, 255, 255), font=artist_font, stroke_width=2, stroke_fill=(0, 0, 0, 255))
 
-        # Song title scrolling marquee with 1px outline stroke spanning full width
+        # Song title scrolling marquee with 2px stroke outline
         if title != self.last_title:
             self.last_title = title
             self.scroll_offset = 0
 
-        song_bbox = draw.textbbox((0, 0), title, font=song_font, stroke_width=1)
+        song_bbox = draw.textbbox((0, 0), title, font=song_font, stroke_width=2)
         song_width = song_bbox[2] - song_bbox[0]
 
         if song_width > max_song_width:
-            text_surf = Image.new("RGBA", (song_width + 40, song_font_size + 8), (0, 0, 0, 0))
+            text_surf = Image.new("RGBA", (song_width + 80, song_font_size + 16), (0, 0, 0, 0))
             t_draw = ImageDraw.Draw(text_surf)
-            t_draw.text((0, 0), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
+            t_draw.text((0, 0), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=2, stroke_fill=(0, 0, 0, 255))
             
-            self.scroll_offset += 3
-            if self.scroll_offset > (song_width - max_song_width + 30):
-                self.scroll_offset = -10
+            self.scroll_offset += 5
+            if self.scroll_offset > (song_width - max_song_width + 40):
+                self.scroll_offset = -15
             
             crop_x = max(0, int(self.scroll_offset))
-            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_song_width, song_font_size + 8))
+            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_song_width, song_font_size + 16))
             bg_canvas.paste(cropped_text, (left_margin, song_y), cropped_text)
         else:
-            draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
+            draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=2, stroke_fill=(0, 0, 0, 255))
 
         # 3. Progression Bar & Timestamps (Bottom)
         bar_y = int(height * 0.63)
-        bar_height = max(8, int(height * 0.11))
+        bar_height = max(16, int(height * 0.11))
         bar_margin = left_margin
         bar_width = width - (bar_margin * 2)
 
         track_bg = (35, 35, 38, 230)
-        track_border = (160, 160, 165, 220) # Light border outline matching reference
+        track_border = (160, 160, 165, 220)
         
         draw.rounded_rectangle(
             [bar_margin, bar_y, bar_margin + bar_width, bar_y + bar_height],
             radius=bar_height // 2,
             fill=track_bg,
             outline=track_border,
-            width=1
+            width=2
         )
 
         if duration > 0:
@@ -1583,7 +1582,7 @@ class MediaDial(MediaAction):
             progress_ratio = 0.0
 
         fill_width = int(bar_width * progress_ratio)
-        if fill_width > 2:
+        if fill_width > 4:
             accent_rgb = self.cached_accent_color
             draw.rounded_rectangle(
                 [bar_margin, bar_y, bar_margin + fill_width, bar_y + bar_height],
@@ -1591,7 +1590,7 @@ class MediaDial(MediaAction):
                 fill=accent_rgb + (255,)
             )
 
-        time_font_size = max(11, int(height * 0.14))
+        time_font_size = max(22, int(height * 0.14)) # ~28px font at 2x scale
         time_font = self.load_font(time_font_size, bold=True)
         time_y = bar_y + bar_height + int(height * 0.03)
 
@@ -1601,12 +1600,14 @@ class MediaDial(MediaAction):
         pos_str = f"{pos_min:02d}:{pos_sec:02d}"
         dur_str = f"{dur_min:02d}:{dur_sec:02d}"
 
-        draw.text((bar_margin, time_y), pos_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
-        dur_bbox = draw.textbbox((0, 0), dur_str, font=time_font, stroke_width=1)
+        draw.text((bar_margin, time_y), pos_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=2, stroke_fill=(0, 0, 0, 255))
+        dur_bbox = draw.textbbox((0, 0), dur_str, font=time_font, stroke_width=2)
         dur_w = dur_bbox[2] - dur_bbox[0]
-        draw.text((width - bar_margin - dur_w, time_y), dur_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
+        draw.text((width - bar_margin - dur_w, time_y), dur_str, fill=(255, 255, 255, 255), font=time_font, stroke_width=2, stroke_fill=(0, 0, 0, 255))
 
-        self.set_media(image=bg_canvas, size=1.0)
+        # Downsample final 2x canvas to target display size using Lanczos anti-aliasing filter
+        final_image = bg_canvas.resize(base_size, Image.Resampling.LANCZOS)
+        self.set_media(image=final_image, size=1.0)
 
 
 class MediaPlugin(PluginBase):
