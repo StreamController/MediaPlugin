@@ -1501,22 +1501,25 @@ class MediaDial(MediaAction):
 
         # 1. Source Icon (Top Right)
         source_icon = self.get_player_source_icon(player_key)
-        icon_margin_right = int(width * 0.05)
-        icon_margin_top = int(height * 0.06)
-        icon_size = int(height * 0.24) # ~24px on 100px height
+        icon_margin_right = int(width * 0.04)
+        icon_margin_top = int(height * 0.04)
+        icon_size = int(height * 0.22) # ~22px on 100px height
         icon_x = width - icon_margin_right - icon_size
         
         if source_icon:
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
 
-        # 2. Artist Name & Song Title (Top Left)
-        left_margin = int(width * 0.05)
-        # Strict boundary: title width will never cross into icon_x margin
-        max_title_width = max(50, icon_x - left_margin - 6)
+        # 2. Artist Name & Song Title (Layout matched to g14212.png)
+        left_margin = int(width * 0.04)
         
-        artist_font_size = max(13, int(height * 0.16)) # 16px on 100px canvas
-        song_font_size = max(18, int(height * 0.24))   # 24px on 100px canvas
+        # Artist Name sits at top-left beside the source icon
+        max_artist_width = max(50, icon_x - left_margin - 4)
+        artist_font_size = max(14, int(height * 0.18)) # ~18px font on 100px canvas (increased size)
+
+        # Song Name sits below Artist Name and spans full width underneath the source icon level
+        max_song_width = width - (left_margin * 2)
+        song_font_size = max(20, int(height * 0.28))   # ~28px font on 100px canvas (massive bold text)
 
         artist_font = self.load_font(artist_font_size, bold=False)
         song_font = self.load_font(song_font_size, bold=True)
@@ -1524,17 +1527,17 @@ class MediaDial(MediaAction):
         artist_y = int(height * 0.04)
         song_y = artist_y + artist_font_size + int(height * 0.01)
 
-        # Artist text (1px outline stroke + truncation if needed)
+        # Artist text (1px outline stroke + truncation beside top-right icon if needed)
         artist_text = artist
         artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=1)
-        if (artist_bbox[2] - artist_bbox[0]) > max_title_width:
-            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=1)[2] > max_title_width:
+        if (artist_bbox[2] - artist_bbox[0]) > max_artist_width:
+            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=1)[2] > max_artist_width:
                 artist_text = artist_text[:-1]
             artist_text += ".."
         
-        draw.text((left_margin, artist_y), artist_text, fill=(235, 235, 235, 255), font=artist_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
+        draw.text((left_margin, artist_y), artist_text, fill=(240, 240, 240, 255), font=artist_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
 
-        # Song title scrolling marquee with 1px outline stroke
+        # Song title scrolling marquee with 1px outline stroke spanning full width
         if title != self.last_title:
             self.last_title = title
             self.scroll_offset = 0
@@ -1542,17 +1545,17 @@ class MediaDial(MediaAction):
         song_bbox = draw.textbbox((0, 0), title, font=song_font, stroke_width=1)
         song_width = song_bbox[2] - song_bbox[0]
 
-        if song_width > max_title_width:
+        if song_width > max_song_width:
             text_surf = Image.new("RGBA", (song_width + 40, song_font_size + 8), (0, 0, 0, 0))
             t_draw = ImageDraw.Draw(text_surf)
             t_draw.text((0, 0), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
             
             self.scroll_offset += 3
-            if self.scroll_offset > (song_width - max_title_width + 30):
+            if self.scroll_offset > (song_width - max_song_width + 30):
                 self.scroll_offset = -10
             
             crop_x = max(0, int(self.scroll_offset))
-            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_title_width, song_font_size + 8))
+            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_song_width, song_font_size + 8))
             bg_canvas.paste(cropped_text, (left_margin, song_y), cropped_text)
         else:
             draw.text((left_margin, song_y), title, fill=(255, 255, 255, 255), font=song_font, stroke_width=1, stroke_fill=(0, 0, 0, 230))
@@ -1564,7 +1567,7 @@ class MediaDial(MediaAction):
         bar_width = width - (bar_margin * 2)
 
         track_bg = (35, 35, 38, 230)
-        track_border = (160, 160, 165, 220) # Light border outline matching rect5.png
+        track_border = (160, 160, 165, 220) # Light border outline matching reference
         
         draw.rounded_rectangle(
             [bar_margin, bar_y, bar_margin + bar_width, bar_y + bar_height],
