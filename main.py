@@ -1356,7 +1356,284 @@ class MediaDial(MediaAction):
         self.cached_accent_color = (40, 220, 100)
 
     def get_config_rows(self) -> "list[Adw.PreferencesRow]":
-        return super().get_config_rows()
+        base_rows = super().get_config_rows()
+
+        # 1. Artist Label Settings Dropdown (Adw.ExpanderRow)
+        self.artist_expander = Adw.ExpanderRow(
+            title="Artist Label Settings",
+            subtitle="Configure text override, font, size, colors, outline, and X/Y position"
+        )
+
+        self.artist_text_row = Adw.EntryRow(title="Custom Text Override")
+        
+        self.artist_font_row = Adw.ActionRow(title="Font Family & Style")
+        self.artist_font_button = Gtk.FontButton()
+        self.artist_font_button.set_valign(Gtk.Align.CENTER)
+        self.artist_font_row.add_suffix(self.artist_font_button)
+
+        self.artist_size_row = Adw.SpinRow.new_with_range(min=8, max=36, step=1)
+        self.artist_size_row.set_title("Font Size (px)")
+
+        self.artist_color_row = Adw.ActionRow(title="Text Color")
+        self.artist_color_button = Gtk.ColorButton()
+        self.artist_color_button.set_valign(Gtk.Align.CENTER)
+        self.artist_color_row.add_suffix(self.artist_color_button)
+
+        self.artist_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
+        self.artist_outline_row.set_title("Outline Width (px)")
+
+        self.artist_outline_color_row = Adw.ActionRow(title="Outline Color")
+        self.artist_outline_color_button = Gtk.ColorButton()
+        self.artist_outline_color_button.set_valign(Gtk.Align.CENTER)
+        self.artist_outline_color_row.add_suffix(self.artist_outline_color_button)
+
+        self.artist_x_row = Adw.SpinRow.new_with_range(min=-50, max=150, step=1)
+        self.artist_x_row.set_title("X Position (px)")
+
+        self.artist_y_row = Adw.SpinRow.new_with_range(min=-20, max=80, step=1)
+        self.artist_y_row.set_title("Y Position (px)")
+
+        self.artist_expander.add_row(self.artist_text_row)
+        self.artist_expander.add_row(self.artist_font_row)
+        self.artist_expander.add_row(self.artist_size_row)
+        self.artist_expander.add_row(self.artist_color_row)
+        self.artist_expander.add_row(self.artist_outline_row)
+        self.artist_expander.add_row(self.artist_outline_color_row)
+        self.artist_expander.add_row(self.artist_x_row)
+        self.artist_expander.add_row(self.artist_y_row)
+
+        # 2. Song Label Settings Dropdown (Adw.ExpanderRow)
+        self.song_expander = Adw.ExpanderRow(
+            title="Song Label Settings",
+            subtitle="Configure text override, font, size, colors, outline, and X/Y position"
+        )
+
+        self.song_text_row = Adw.EntryRow(title="Custom Text Override")
+
+        self.song_font_row = Adw.ActionRow(title="Font Family & Style")
+        self.song_font_button = Gtk.FontButton()
+        self.song_font_button.set_valign(Gtk.Align.CENTER)
+        self.song_font_row.add_suffix(self.song_font_button)
+
+        self.song_size_row = Adw.SpinRow.new_with_range(min=8, max=46, step=1)
+        self.song_size_row.set_title("Font Size (px)")
+
+        self.song_color_row = Adw.ActionRow(title="Text Color")
+        self.song_color_button = Gtk.ColorButton()
+        self.song_color_button.set_valign(Gtk.Align.CENTER)
+        self.song_color_row.add_suffix(self.song_color_button)
+
+        self.song_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
+        self.song_outline_row.set_title("Outline Width (px)")
+
+        self.song_outline_color_row = Adw.ActionRow(title="Outline Color")
+        self.song_outline_color_button = Gtk.ColorButton()
+        self.song_outline_color_button.set_valign(Gtk.Align.CENTER)
+        self.song_outline_color_row.add_suffix(self.song_outline_color_button)
+
+        self.song_x_row = Adw.SpinRow.new_with_range(min=-50, max=150, step=1)
+        self.song_x_row.set_title("X Position (px)")
+
+        self.song_y_row = Adw.SpinRow.new_with_range(min=-50, max=80, step=1)
+        self.song_y_row.set_title("Y Position Offset (px)")
+
+        self.song_expander.add_row(self.song_text_row)
+        self.song_expander.add_row(self.song_font_row)
+        self.song_expander.add_row(self.song_size_row)
+        self.song_expander.add_row(self.song_color_row)
+        self.song_expander.add_row(self.song_outline_row)
+        self.song_expander.add_row(self.song_outline_color_row)
+        self.song_expander.add_row(self.song_x_row)
+        self.song_expander.add_row(self.song_y_row)
+
+        self.load_dial_config_defaults()
+
+        self.artist_text_row.connect("changed", self.on_change_dial_config)
+        self.artist_font_button.connect("font-set", self.on_change_artist_font)
+        self.artist_size_row.connect("changed", self.on_change_dial_config)
+        self.artist_size_row.connect("notify::value", self.on_change_dial_config)
+        self.artist_color_button.connect("color-set", self.on_change_dial_config)
+        self.artist_outline_row.connect("changed", self.on_change_dial_config)
+        self.artist_outline_row.connect("notify::value", self.on_change_dial_config)
+        self.artist_outline_color_button.connect("color-set", self.on_change_dial_config)
+        self.artist_x_row.connect("changed", self.on_change_dial_config)
+        self.artist_x_row.connect("notify::value", self.on_change_dial_config)
+        self.artist_y_row.connect("changed", self.on_change_dial_config)
+        self.artist_y_row.connect("notify::value", self.on_change_dial_config)
+
+        self.song_text_row.connect("changed", self.on_change_dial_config)
+        self.song_font_button.connect("font-set", self.on_change_song_font)
+        self.song_size_row.connect("changed", self.on_change_dial_config)
+        self.song_size_row.connect("notify::value", self.on_change_dial_config)
+        self.song_color_button.connect("color-set", self.on_change_dial_config)
+        self.song_outline_row.connect("changed", self.on_change_dial_config)
+        self.song_outline_row.connect("notify::value", self.on_change_dial_config)
+        self.song_outline_color_button.connect("color-set", self.on_change_dial_config)
+        self.song_x_row.connect("changed", self.on_change_dial_config)
+        self.song_x_row.connect("notify::value", self.on_change_dial_config)
+        self.song_y_row.connect("changed", self.on_change_dial_config)
+        self.song_y_row.connect("notify::value", self.on_change_dial_config)
+
+        return base_rows + [
+            self.artist_expander,
+            self.song_expander
+        ]
+
+    def load_dial_config_defaults(self):
+        settings = self.get_settings()
+        if settings is None:
+            return
+
+        artist_override = settings.setdefault("artist_text_override", "")
+        artist_font_desc = settings.setdefault("artist_font_desc", "DejaVu Sans Book 15")
+        artist_size = settings.setdefault("artist_font_size", 15)
+        artist_color = settings.setdefault("artist_color", [255, 255, 255, 255])
+        artist_outline = settings.setdefault("artist_outline_size", 2)
+        artist_outline_color = settings.setdefault("artist_outline_color", [0, 0, 0, 240])
+        artist_x = settings.setdefault("artist_x_offset", 6)
+        artist_y = settings.setdefault("artist_y_offset", 4)
+
+        song_override = settings.setdefault("song_text_override", "")
+        song_font_desc = settings.setdefault("song_font_desc", "DejaVu Sans Bold 20")
+        song_size = settings.setdefault("song_font_size", 20)
+        song_color = settings.setdefault("song_color", [255, 255, 255, 255])
+        song_outline = settings.setdefault("song_outline_size", 2)
+        song_outline_color = settings.setdefault("song_outline_color", [0, 0, 0, 240])
+        song_x = settings.setdefault("song_x_offset", 6)
+        song_y = settings.setdefault("song_y_offset", 0)
+
+        self.set_settings(settings)
+
+        if hasattr(self, "artist_text_row"):
+            self.artist_text_row.set_text(str(artist_override))
+        if hasattr(self, "song_text_row"):
+            self.song_text_row.set_text(str(song_override))
+
+        try:
+            self.artist_font_button.set_font_desc(Pango.FontDescription.from_string(artist_font_desc))
+        except Exception:
+            pass
+
+        try:
+            self.song_font_button.set_font_desc(Pango.FontDescription.from_string(song_font_desc))
+        except Exception:
+            pass
+
+        self.artist_size_row.set_value(float(artist_size))
+        self.artist_outline_row.set_value(float(artist_outline))
+        self.artist_x_row.set_value(float(artist_x))
+        self.artist_y_row.set_value(float(artist_y))
+
+        self.song_size_row.set_value(float(song_size))
+        self.song_outline_row.set_value(float(song_outline))
+        self.song_x_row.set_value(float(song_x))
+        self.song_y_row.set_value(float(song_y))
+
+        try:
+            rgba_a = Gdk.RGBA()
+            rgba_a.parse(f"rgba({artist_color[0]},{artist_color[1]},{artist_color[2]},{artist_color[3]/255.0})")
+            self.artist_color_button.set_rgba(rgba_a)
+        except Exception:
+            pass
+
+        try:
+            rgba_ao = Gdk.RGBA()
+            rgba_ao.parse(f"rgba({artist_outline_color[0]},{artist_outline_color[1]},{artist_outline_color[2]},{artist_outline_color[3]/255.0})")
+            self.artist_outline_color_button.set_rgba(rgba_ao)
+        except Exception:
+            pass
+
+        try:
+            rgba_s = Gdk.RGBA()
+            rgba_s.parse(f"rgba({song_color[0]},{song_color[1]},{song_color[2]},{song_color[3]/255.0})")
+            self.song_color_button.set_rgba(rgba_s)
+        except Exception:
+            pass
+
+        try:
+            rgba_so = Gdk.RGBA()
+            rgba_so.parse(f"rgba({song_outline_color[0]},{song_outline_color[1]},{song_outline_color[2]},{song_outline_color[3]/255.0})")
+            self.song_outline_color_button.set_rgba(rgba_so)
+        except Exception:
+            pass
+
+    def on_change_artist_font(self, button):
+        settings = self.get_settings()
+        if settings is None:
+            return
+        font_desc = button.get_font_desc()
+        if font_desc:
+            settings["artist_font_desc"] = font_desc.to_string()
+            size_pango = font_desc.get_size()
+            if size_pango > 0:
+                size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
+                if size > 0:
+                    settings["artist_font_size"] = size
+                    if hasattr(self, "artist_size_row"):
+                        self.artist_size_row.set_value(float(size))
+            self.set_settings(settings)
+            self.on_tick()
+            self.update_image()
+
+    def on_change_song_font(self, button):
+        settings = self.get_settings()
+        if settings is None:
+            return
+        font_desc = button.get_font_desc()
+        if font_desc:
+            settings["song_font_desc"] = font_desc.to_string()
+            size_pango = font_desc.get_size()
+            if size_pango > 0:
+                size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
+                if size > 0:
+                    settings["song_font_size"] = size
+                    if hasattr(self, "song_size_row"):
+                        self.song_size_row.set_value(float(size))
+            self.set_settings(settings)
+            self.on_tick()
+            self.update_image()
+
+    def on_change_dial_config(self, *args):
+        settings = self.get_settings()
+        if settings is None:
+            return
+        if hasattr(self, "artist_text_row"):
+            settings["artist_text_override"] = self.artist_text_row.get_text()
+        if hasattr(self, "artist_size_row"):
+            settings["artist_font_size"] = int(self.artist_size_row.get_value())
+        if hasattr(self, "artist_outline_row"):
+            settings["artist_outline_size"] = int(self.artist_outline_row.get_value())
+        if hasattr(self, "artist_x_row"):
+            settings["artist_x_offset"] = int(self.artist_x_row.get_value())
+        if hasattr(self, "artist_y_row"):
+            settings["artist_y_offset"] = int(self.artist_y_row.get_value())
+        if hasattr(self, "artist_color_button"):
+            c = self.artist_color_button.get_rgba()
+            settings["artist_color"] = [int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255)]
+        if hasattr(self, "artist_outline_color_button"):
+            c = self.artist_outline_color_button.get_rgba()
+            settings["artist_outline_color"] = [int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255)]
+
+        if hasattr(self, "song_text_row"):
+            settings["song_text_override"] = self.song_text_row.get_text()
+        if hasattr(self, "song_size_row"):
+            settings["song_font_size"] = int(self.song_size_row.get_value())
+        if hasattr(self, "song_outline_row"):
+            settings["song_outline_size"] = int(self.song_outline_row.get_value())
+        if hasattr(self, "song_x_row"):
+            settings["song_x_offset"] = int(self.song_x_row.get_value())
+        if hasattr(self, "song_y_row"):
+            settings["song_y_offset"] = int(self.song_y_row.get_value())
+        if hasattr(self, "song_color_button"):
+            c = self.song_color_button.get_rgba()
+            settings["song_color"] = [int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255)]
+        if hasattr(self, "song_outline_color_button"):
+            c = self.song_outline_color_button.get_rgba()
+            settings["song_outline_color"] = [int(c.red*255), int(c.green*255), int(c.blue*255), int(c.alpha*255)]
+
+        self.set_settings(settings)
+        self.on_tick()
+        self.update_image()
 
     def on_ready(self):
         self.update_image()
@@ -1501,13 +1778,44 @@ class MediaDial(MediaAction):
             return
 
         # Fetch metadata
-        title = self.plugin_base.mc.title(player_name)
-        if isinstance(title, list): title = title[0] if title else ""
-        title = str(title) if title else "Unknown Title"
+        title_meta = self.plugin_base.mc.title(player_name)
+        if isinstance(title_meta, list): title_meta = title_meta[0] if title_meta else ""
+        title_meta = str(title_meta) if title_meta else "Unknown Title"
 
-        artist = self.plugin_base.mc.artist(player_name)
-        if isinstance(artist, list): artist = artist[0] if artist else ""
-        artist = str(artist) if artist else "Unknown Artist"
+        artist_meta = self.plugin_base.mc.artist(player_name)
+        if isinstance(artist_meta, list): artist_meta = artist_meta[0] if artist_meta else ""
+        artist_meta = str(artist_meta) if artist_meta else "Unknown Artist"
+
+        # Load user settings or defaults
+        settings = self.get_settings() or {}
+
+        artist_override = settings.get("artist_text_override", "").strip()
+        artist = artist_override if artist_override else artist_meta
+
+        song_override = settings.get("song_text_override", "").strip()
+        title = song_override if song_override else title_meta
+
+        artist_font_desc = settings.get("artist_font_desc", "DejaVu Sans Book 15")
+        artist_font_size = int(settings.get("artist_font_size", 15))
+        artist_color = tuple(settings.get("artist_color", [255, 255, 255, 255]))
+        artist_outline_size = int(settings.get("artist_outline_size", 2))
+        artist_outline_color = tuple(settings.get("artist_outline_color", [0, 0, 0, 240]))
+        artist_x_offset = int(settings.get("artist_x_offset", 6))
+        artist_y_offset = int(settings.get("artist_y_offset", 4))
+
+        song_font_desc = settings.get("song_font_desc", "DejaVu Sans Bold 20")
+        song_font_size = int(settings.get("song_font_size", 20))
+        song_color = tuple(settings.get("song_color", [255, 255, 255, 255]))
+        song_outline_size = int(settings.get("song_outline_size", 2))
+        song_outline_color = tuple(settings.get("song_outline_color", [0, 0, 0, 240]))
+        song_x_offset = int(settings.get("song_x_offset", 6))
+        song_y_offset = int(settings.get("song_y_offset", 0))
+
+        artist_font_path = pango_desc_to_font_path(artist_font_desc)
+        song_font_path = pango_desc_to_font_path(song_font_desc)
+
+        artist_font = self.load_truetype_font(artist_font_path, artist_font_size)
+        song_font = self.load_truetype_font(song_font_path, song_font_size)
 
         position = self.plugin_base.mc.position(player_name)
         if isinstance(position, list): position = position[0] if position else 0.0
@@ -1553,24 +1861,13 @@ class MediaDial(MediaAction):
 
         draw = ImageDraw.Draw(bg_canvas)
 
-        # Update StreamController native action labels (Top slot for Artist, Center slot for Song Title)
-        self.set_top_label(artist, update=False)
-        self.set_center_label(title, update=False)
-
-        # Set default left alignment for native labels if not already customized
-        try:
-            top_label_obj = self.get_state().label_manager.action_labels.get("top")
-            if top_label_obj and top_label_obj.alignment is None:
-                top_label_obj.alignment = "left"
-            center_label_obj = self.get_state().label_manager.action_labels.get("center")
-            if center_label_obj and center_label_obj.alignment is None:
-                center_label_obj.alignment = "left"
-        except Exception:
-            pass
+        # Clear native global labels so custom high-res layout renders text cleanly from action settings
+        self.set_top_label("", update=False)
+        self.set_center_label("", update=False)
 
         # 1. Source Icon (Top Right)
         source_icon = self.get_player_source_icon(player_key)
-        icon_margin_right = 8
+        icon_margin_right = 6
         icon_margin_top = 4
         icon_size = 22
         icon_x = width - icon_margin_right - icon_size
@@ -1578,6 +1875,51 @@ class MediaDial(MediaAction):
         if source_icon:
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
             bg_canvas.paste(source_icon, (icon_x, icon_margin_top), source_icon)
+
+        # 2. Artist Name & Song Title (Custom X/Y offsets, exact 5px vertical gap, action-specific font settings)
+        artist_y = artist_y_offset
+        artist_x = artist_x_offset
+        max_artist_width = max(50, icon_x - artist_x - 4)
+
+        # Artist text rendering
+        artist_text = artist
+        artist_bbox = draw.textbbox((0, 0), artist_text, font=artist_font, stroke_width=artist_outline_size)
+        if (artist_bbox[2] - artist_bbox[0]) > max_artist_width:
+            while len(artist_text) > 3 and draw.textbbox((0, 0), artist_text + "..", font=artist_font, stroke_width=artist_outline_size)[2] > max_artist_width:
+                artist_text = artist_text[:-1]
+            artist_text += ".."
+        
+        draw.text((artist_x, artist_y), artist_text, fill=artist_color, font=artist_font, stroke_width=artist_outline_size, stroke_fill=artist_outline_color)
+        
+        # Exact 5px gap + user song_y_offset between Artist Name and Song Title
+        artist_height = artist_bbox[3] - artist_bbox[1]
+        song_y = artist_y + artist_height + 5 + song_y_offset
+        song_x = song_x_offset
+
+        # Song Title rendering with marquee scrolling if title exceeds max width
+        max_song_width = width - (song_x * 2)
+        
+        if title != self.last_title:
+            self.last_title = title
+            self.scroll_offset = 0
+
+        song_bbox = draw.textbbox((0, 0), title, font=song_font, stroke_width=song_outline_size)
+        song_width = song_bbox[2] - song_bbox[0]
+
+        if song_width > max_song_width:
+            text_surf = Image.new("RGBA", (song_width + 40, song_font_size + 8), (0, 0, 0, 0))
+            t_draw = ImageDraw.Draw(text_surf)
+            t_draw.text((0, 0), title, fill=song_color, font=song_font, stroke_width=song_outline_size, stroke_fill=song_outline_color)
+            
+            self.scroll_offset += 3
+            if self.scroll_offset > (song_width - max_song_width + 25):
+                self.scroll_offset = -12
+            
+            crop_x = max(0, int(self.scroll_offset))
+            cropped_text = text_surf.crop((crop_x, 0, crop_x + max_song_width, song_font_size + 8))
+            bg_canvas.paste(cropped_text, (song_x, song_y), cropped_text)
+        else:
+            draw.text((song_x, song_y), title, fill=song_color, font=song_font, stroke_width=song_outline_size, stroke_fill=song_outline_color)
 
         # 2. Progression Bar & Timestamps (Enlarged 22px Bold timestamps on left and right, centered progress bar)
         time_font_size = 22
