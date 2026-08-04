@@ -1420,13 +1420,15 @@ class MediaDial(MediaAction):
         if settings is None:
             return
 
-        artist_font_desc = settings.setdefault("artist_font_desc", "DejaVu Sans Book 14")
-        artist_size = settings.setdefault("artist_font_size", 14)
-        artist_outline = settings.setdefault("artist_outline_size", 1)
+        artist_font_desc = settings.setdefault("artist_font_desc", "DejaVu Sans Book 12")
+        artist_size = settings.setdefault("artist_font_size", 12)
+        artist_outline = settings.setdefault("artist_outline_size", 2)
 
-        song_font_desc = settings.setdefault("song_font_desc", "DejaVu Sans Bold 20")
-        song_size = settings.setdefault("song_font_size", 20)
+        song_font_desc = settings.setdefault("song_font_desc", "DejaVu Sans Bold 21")
+        song_size = settings.setdefault("song_font_size", 21)
         song_outline = settings.setdefault("song_outline_size", 2)
+
+        self.set_settings(settings)
 
         try:
             self.artist_font_button.set_font_desc(Pango.FontDescription.from_string(artist_font_desc))
@@ -1608,12 +1610,12 @@ class MediaDial(MediaAction):
 
         # Load independent user font settings
         settings = self.get_settings() or {}
-        artist_font_desc = settings.get("artist_font_desc", "DejaVu Sans Book 14")
-        artist_font_size = int(settings.get("artist_font_size", 14))
-        artist_outline_size = int(settings.get("artist_outline_size", 1))
+        artist_font_desc = settings.get("artist_font_desc", "DejaVu Sans Book 12")
+        artist_font_size = int(settings.get("artist_font_size", 12))
+        artist_outline_size = int(settings.get("artist_outline_size", 2))
 
-        song_font_desc = settings.get("song_font_desc", "DejaVu Sans Bold 20")
-        song_font_size = int(settings.get("song_font_size", 20))
+        song_font_desc = settings.get("song_font_desc", "DejaVu Sans Bold 21")
+        song_font_size = int(settings.get("song_font_size", 21))
         song_outline_size = int(settings.get("song_outline_size", 2))
 
         artist_font_path = pango_desc_to_font_path(artist_font_desc)
