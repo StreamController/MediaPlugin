@@ -1558,7 +1558,7 @@ class MediaDial(MediaAction):
         dur_min, dur_sec = int(duration // 60), int(duration % 60)
         pos_str = f"{pos_min:02d}:{pos_sec:02d}"
         dur_str = f"{dur_min:02d}:{dur_sec:02d}"
-        time_str = f"{pos_str}                              {dur_str}"
+        time_str = f"{pos_str}              {dur_str}"
 
         # Update StreamController native action labels (Top for Artist, Center for Song Title, Bottom for Timestamps)
         self.set_top_label(artist, update=False)
