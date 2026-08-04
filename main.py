@@ -1565,16 +1565,16 @@ class MediaDial(MediaAction):
         self.set_center_label(title, update=False)
         self.set_bottom_label(time_str, update=False)
 
-        # Set center alignment for native labels
+        # Set default center alignment for native labels on initial creation if not explicitly customized by user
         try:
             top_label_obj = self.get_state().label_manager.action_labels.get("top")
-            if top_label_obj:
+            if top_label_obj and top_label_obj.alignment is None:
                 top_label_obj.alignment = "center"
             center_label_obj = self.get_state().label_manager.action_labels.get("center")
-            if center_label_obj:
+            if center_label_obj and center_label_obj.alignment is None:
                 center_label_obj.alignment = "center"
             bottom_label_obj = self.get_state().label_manager.action_labels.get("bottom")
-            if bottom_label_obj:
+            if bottom_label_obj and bottom_label_obj.alignment is None:
                 bottom_label_obj.alignment = "center"
         except Exception:
             pass
