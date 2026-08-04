@@ -1382,10 +1382,9 @@ class MediaDial(MediaAction):
 
     def load_font(self, font_size: int, bold: bool = False):
         font_paths = [
-            "/usr/share/fonts/truetype/ubuntu/Ubuntu[wdth,wght].ttf",
-            "/usr/share/fonts/truetype/ubuntu/Ubuntu-M.ttf",
-            "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf" if bold else "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf" if bold else "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu[wdth,wght].ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
         ]
         for p in font_paths:
@@ -1492,19 +1491,19 @@ class MediaDial(MediaAction):
         if bg_img:
             bg_canvas = ImageOps.fit(bg_img.convert("RGBA"), (width, height))
             enhancer = ImageEnhance.Brightness(bg_canvas)
-            bg_canvas = enhancer.enhance(0.45) # Fainted/dimmed background
-            dark_overlay = Image.new("RGBA", (width, height), (0, 0, 0, 80))
+            bg_canvas = enhancer.enhance(0.55) # Increased brightness by 10%
+            dark_overlay = Image.new("RGBA", (width, height), (0, 0, 0, 60))
             bg_canvas = Image.alpha_composite(bg_canvas, dark_overlay)
         else:
             bg_canvas = Image.new("RGBA", (width, height), (25, 25, 28, 255))
 
         draw = ImageDraw.Draw(bg_canvas)
 
-        # 1. Source Icon (Top Right)
+        # 1. Source Icon (Top Right - sized matching rect5.png reference)
         source_icon = self.get_player_source_icon(player_key)
-        icon_margin_right = int(width * 0.04)
-        icon_margin_top = int(height * 0.05)
-        icon_size = int(height * 0.32) # ~32px on 100px height
+        icon_margin_right = int(width * 0.05)
+        icon_margin_top = int(height * 0.06)
+        icon_size = int(height * 0.22) # Reduced icon size to match rect5.png reference
         
         if source_icon:
             source_icon = source_icon.convert("RGBA").resize((icon_size, icon_size), Image.Resampling.LANCZOS)
