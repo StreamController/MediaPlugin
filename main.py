@@ -1356,7 +1356,150 @@ class MediaDial(MediaAction):
         self.cached_accent_color = (40, 220, 100)
 
     def get_config_rows(self) -> "list[Adw.PreferencesRow]":
-        return super().get_config_rows()
+        base_rows = super().get_config_rows()
+
+        # 1. Artist Label Settings Dropdown (Adw.ExpanderRow)
+        self.artist_expander = Adw.ExpanderRow(
+            title="Artist Label Settings",
+            subtitle="Configure font, size, and outline for Artist Name"
+        )
+
+        self.artist_font_row = Adw.ActionRow(title="Font")
+        self.artist_font_button = Gtk.FontButton()
+        self.artist_font_button.set_valign(Gtk.Align.CENTER)
+        self.artist_font_row.add_suffix(self.artist_font_button)
+
+        self.artist_size_row = Adw.SpinRow.new_with_range(min=8, max=36, step=1)
+        self.artist_size_row.set_title("Font Size (px)")
+
+        self.artist_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
+        self.artist_outline_row.set_title("Outline Width (px)")
+
+        self.artist_expander.add_row(self.artist_font_row)
+        self.artist_expander.add_row(self.artist_size_row)
+        self.artist_expander.add_row(self.artist_outline_row)
+
+        # 2. Song Label Settings Dropdown (Adw.ExpanderRow)
+        self.song_expander = Adw.ExpanderRow(
+            title="Song Label Settings",
+            subtitle="Configure font, size, and outline for Song Title"
+        )
+
+        self.song_font_row = Adw.ActionRow(title="Font")
+        self.song_font_button = Gtk.FontButton()
+        self.song_font_button.set_valign(Gtk.Align.CENTER)
+        self.song_font_row.add_suffix(self.song_font_button)
+
+        self.song_size_row = Adw.SpinRow.new_with_range(min=8, max=46, step=1)
+        self.song_size_row.set_title("Font Size (px)")
+
+        self.song_outline_row = Adw.SpinRow.new_with_range(min=0, max=10, step=1)
+        self.song_outline_row.set_title("Outline Width (px)")
+
+        self.song_expander.add_row(self.song_font_row)
+        self.song_expander.add_row(self.song_size_row)
+        self.song_expander.add_row(self.song_outline_row)
+
+        self.load_dial_config_defaults()
+
+        self.artist_font_button.connect("font-set", self.on_change_artist_font)
+        self.artist_size_row.connect("changed", self.on_change_dial_config)
+        self.artist_size_row.connect("notify::value", self.on_change_dial_config)
+        self.artist_outline_row.connect("changed", self.on_change_dial_config)
+        self.artist_outline_row.connect("notify::value", self.on_change_dial_config)
+
+        self.song_font_button.connect("font-set", self.on_change_song_font)
+        self.song_size_row.connect("changed", self.on_change_dial_config)
+        self.song_size_row.connect("notify::value", self.on_change_dial_config)
+        self.song_outline_row.connect("changed", self.on_change_dial_config)
+        self.song_outline_row.connect("notify::value", self.on_change_dial_config)
+
+        return base_rows + [
+            self.artist_expander,
+            self.song_expander
+        ]
+
+    def load_dial_config_defaults(self):
+        settings = self.get_settings()
+        if settings is None:
+            return
+
+        artist_font_desc = settings.setdefault("artist_font_desc", "DejaVu Sans Book 15")
+        artist_size = settings.setdefault("artist_font_size", 15)
+        artist_outline = settings.setdefault("artist_outline_size", 2)
+
+        song_font_desc = settings.setdefault("song_font_desc", "DejaVu Sans Bold 20")
+        song_size = settings.setdefault("song_font_size", 20)
+        song_outline = settings.setdefault("song_outline_size", 2)
+
+        self.set_settings(settings)
+
+        try:
+            self.artist_font_button.set_font_desc(Pango.FontDescription.from_string(artist_font_desc))
+        except Exception:
+            pass
+
+        try:
+            self.song_font_button.set_font_desc(Pango.FontDescription.from_string(song_font_desc))
+        except Exception:
+            pass
+
+        self.artist_size_row.set_value(float(artist_size))
+        self.artist_outline_row.set_value(float(artist_outline))
+        self.song_size_row.set_value(float(song_size))
+        self.song_outline_row.set_value(float(song_outline))
+
+    def on_change_artist_font(self, button):
+        settings = self.get_settings()
+        if settings is None:
+            return
+        font_desc = button.get_font_desc()
+        if font_desc:
+            settings["artist_font_desc"] = font_desc.to_string()
+            size_pango = font_desc.get_size()
+            if size_pango > 0:
+                size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
+                if size > 0:
+                    settings["artist_font_size"] = size
+                    if hasattr(self, "artist_size_row"):
+                        self.artist_size_row.set_value(float(size))
+            self.set_settings(settings)
+            self.on_tick()
+            self.update_image()
+
+    def on_change_song_font(self, button):
+        settings = self.get_settings()
+        if settings is None:
+            return
+        font_desc = button.get_font_desc()
+        if font_desc:
+            settings["song_font_desc"] = font_desc.to_string()
+            size_pango = font_desc.get_size()
+            if size_pango > 0:
+                size = int(size_pango / Pango.SCALE) if not font_desc.get_size_is_absolute() else int(size_pango)
+                if size > 0:
+                    settings["song_font_size"] = size
+                    if hasattr(self, "song_size_row"):
+                        self.song_size_row.set_value(float(size))
+            self.set_settings(settings)
+            self.on_tick()
+            self.update_image()
+
+    def on_change_dial_config(self, *args):
+        settings = self.get_settings()
+        if settings is None:
+            return
+        if hasattr(self, "artist_size_row"):
+            settings["artist_font_size"] = int(self.artist_size_row.get_value())
+        if hasattr(self, "artist_outline_row"):
+            settings["artist_outline_size"] = int(self.artist_outline_row.get_value())
+        if hasattr(self, "song_size_row"):
+            settings["song_font_size"] = int(self.song_size_row.get_value())
+        if hasattr(self, "song_outline_row"):
+            settings["song_outline_size"] = int(self.song_outline_row.get_value())
+        self.set_settings(settings)
+        self.on_tick()
+        self.update_image()
 
     def on_ready(self):
         self.update_image()
