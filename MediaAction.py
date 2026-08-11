@@ -59,7 +59,7 @@ class MediaAction(ActionBase):
         self.choose_idle_icon_button.connect("clicked", self.on_choose_idle_icon_clicked)
         self.clear_idle_icon_button.connect("clicked", self.on_clear_idle_icon)
 
-        return [self.player_selector, self.label_toggle, self.thumbnail_toggle, self.idle_icon_row]
+        return [self.player_selector, self.label_toggle, self.thumbnail_toggle]
 
     ## Custom methods
     def load_config_defaults(self):

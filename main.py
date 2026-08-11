@@ -70,10 +70,6 @@ class Play(MediaAction):
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
-            idle_image = self.get_idle_icon()
-            if idle_image is not None:
-                self.set_media(image=idle_image, size=size, valign=valign)
-                return
             image = Image.open(icon_path)
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
@@ -149,10 +145,6 @@ class Pause(MediaAction):
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
-            idle_image = self.get_idle_icon()
-            if idle_image is not None:
-                self.set_media(image=idle_image, size=size, valign=valign)
-                return
             image = Image.open(icon_path)
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
@@ -237,10 +229,6 @@ class PlayPause(MediaAction):
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
-            idle_image = self.get_idle_icon()
-            if idle_image is not None:
-                self.set_media(image=idle_image, size=size, valign=valign)
-                return
             file_path = file[self.current_status]
             image = Image.open(file_path)
             enhancer = ImageEnhance.Brightness(image)
@@ -302,10 +290,6 @@ class Next(MediaAction):
 
         image = Image.open(os.path.join(self.plugin_base.PATH, "assets", "next.png"))
         if status == None:
-            idle_image = self.get_idle_icon()
-            if idle_image is not None:
-                self.set_media(image=idle_image, size=size, valign=valign)
-                return
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
 
@@ -354,10 +338,6 @@ class Previous(MediaAction):
 
         image = Image.open(os.path.join(self.plugin_base.PATH, "assets", "previous.png"))
         if status == None:
-            idle_image = self.get_idle_icon()
-            if idle_image is not None:
-                self.set_media(image=idle_image, size=size, valign=valign)
-                return
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
         
@@ -450,7 +430,7 @@ class Info(MediaAction):
 
         self.seperator_text_entry.connect("notify::text", self.on_change_seperator_text)
 
-        return super_rows + [self.seperator_text_entry]
+        return super_rows + [self.idle_icon_row, self.seperator_text_entry]
     
     def load_own_config_defaults(self):
         settings = self.get_settings()
@@ -873,9 +853,6 @@ class ThumbnailBackground(MediaAction):
         
         rows.append(self.size_mode_selector)  # type: ignore[arg-type]
 
-        if hasattr(self, "idle_icon_row") and self.idle_icon_row is not None:
-            rows.append(self.idle_icon_row)
-
         return rows
     
     def load_size_mode_default(self):
@@ -949,12 +926,8 @@ class ThumbnailBackground(MediaAction):
         
         if thumbnail_path is None:
             self.last_thumbnail_path = None
-            idle_image = self.get_idle_icon()
-            if idle_image is not None:
-                thumbnail = idle_image
-            else:
-                self.restore_original_background()
-                return
+            self.restore_original_background()
+            return
         else:
             # Load thumbnail image
             try:
@@ -1492,10 +1465,6 @@ class MediaDial(MediaAction):
         song_font = self.load_truetype_font(song_font_path, song_font_size)
 
         if status is None:
-            idle_image = self.get_idle_icon()
-            if idle_image is not None:
-                self.set_media(image=idle_image.resize((width, height), Image.Resampling.LANCZOS), size=1.0)
-                return
             bg = Image.new("RGBA", (width, height), (20, 20, 20, 255))
             draw = ImageDraw.Draw(bg)
             font = self.load_truetype_font(song_font_path, 15)
