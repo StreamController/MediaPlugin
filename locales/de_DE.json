@@ -27,5 +27,5 @@
     "actions.media-action.idle-icon.label": "Inaktives Icon",
     "actions.media-action.idle-icon.subtitle": "Icon, das angezeigt wird, wenn keine Medien abgespielt werden",
     "actions.media-action.idle-icon.dialog-title": "Inaktives Icon auswählen",
-    "actions.media-action.idle-icon.default-subtitle": "Keines"
+    "actions.media-action.idle-icon.default-subtitle": "Standard"
 }
