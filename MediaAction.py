@@ -59,7 +59,7 @@ class MediaAction(ActionBase):
         self.choose_idle_icon_button.connect("clicked", self.on_choose_idle_icon_clicked)
         self.clear_idle_icon_button.connect("clicked", self.on_clear_idle_icon)
 
-        return [self.player_selector, self.label_toggle, self.thumbnail_toggle, self.idle_icon_row]
+        return [self.player_selector, self.label_toggle, self.thumbnail_toggle]
 
     ## Custom methods
     def load_config_defaults(self):
@@ -166,7 +166,7 @@ class MediaAction(ActionBase):
             self.clear_idle_icon_button.set_sensitive(True)
         else:
             default_text = self.plugin_base.lm.get("actions.media-action.idle-icon.default-subtitle")
-            self.idle_icon_row.set_subtitle("None" if default_text is None else default_text)
+            self.idle_icon_row.set_subtitle("Default" if default_text is None else default_text)
             self.clear_idle_icon_button.set_sensitive(False)
 
     def on_choose_idle_icon_clicked(self, button):
@@ -195,14 +195,21 @@ class MediaAction(ActionBase):
 
     def get_idle_icon(self) -> Image.Image | None:
         settings = self.get_settings()
-        if settings is None:
-            return None
-        idle_icon_path = settings.get("idle_icon", "")
-        if idle_icon_path and os.path.isfile(idle_icon_path):
+        if settings is not None:
+            idle_icon_path = settings.get("idle_icon", "")
+            if idle_icon_path and os.path.isfile(idle_icon_path):
+                try:
+                    return Image.open(idle_icon_path)
+                except Exception as e:
+                    pass
+
+        default_idle_path = os.path.join(self.plugin_base.PATH, "assets", "idle.png")
+        if os.path.isfile(default_idle_path):
             try:
-                return Image.open(idle_icon_path)
+                return Image.open(default_idle_path)
             except Exception as e:
                 pass
+
         return None
 
     def generate_image(self, icon:Image.Image = None, background:Image.Image=None, valign: float = 0, halign: float = 0, size: float = 1):
