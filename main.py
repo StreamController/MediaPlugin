@@ -17,7 +17,7 @@ from gi.repository import Gtk, Adw, GLib
 import sys
 import os
 import io
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance, ImageOps, ImageDraw, ImageFont
 
 import globals as gl
 
@@ -70,6 +70,10 @@ class Play(MediaAction):
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                self.set_media(image=idle_image, size=size, valign=valign)
+                return
             image = Image.open(icon_path)
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
@@ -145,6 +149,10 @@ class Pause(MediaAction):
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                self.set_media(image=idle_image, size=size, valign=valign)
+                return
             image = Image.open(icon_path)
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
@@ -229,6 +237,10 @@ class PlayPause(MediaAction):
         if status == None:
             if self.current_status == None:
                 self.current_status = "Playing"
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                self.set_media(image=idle_image, size=size, valign=valign)
+                return
             file_path = file[self.current_status]
             image = Image.open(file_path)
             enhancer = ImageEnhance.Brightness(image)
@@ -290,6 +302,10 @@ class Next(MediaAction):
 
         image = Image.open(os.path.join(self.plugin_base.PATH, "assets", "next.png"))
         if status == None:
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                self.set_media(image=idle_image, size=size, valign=valign)
+                return
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
 
@@ -338,6 +354,10 @@ class Previous(MediaAction):
 
         image = Image.open(os.path.join(self.plugin_base.PATH, "assets", "previous.png"))
         if status == None:
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                self.set_media(image=idle_image, size=size, valign=valign)
+                return
             enhancer = ImageEnhance.Brightness(image)
             image = enhancer.enhance(0.6)
         
@@ -366,27 +386,47 @@ class Info(MediaAction):
         self.update_image()
 
     def update_image(self):
+        status = self.plugin_base.mc.status(self.get_player_name())
+        if isinstance(status, list):
+            status = status[0]
+
+        if status == None:
+            self.set_top_label("", font_size=12)
+            self.set_center_label("", font_size=12)
+            self.set_bottom_label("", font_size=12)
+            
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                self.set_media(image=idle_image)
+            else:
+                self.set_media(image=Image.new("RGBA", (256, 256), (255, 255, 255, 0)))
+            return
+
         title = self.plugin_base.mc.title(self.get_player_name())
         artist = self.plugin_base.mc.artist(self.get_player_name())
 
         if title is not None:
             title = self.shorten_label(title[0], 10)
-        if title is not None:
+        if artist is not None:
             artist = self.shorten_label(artist[0], 10)
 
         if self.get_settings() is None:
             return
 
-        self.set_top_label(str(title), font_size=12)
-        self.set_center_label(self.get_settings().get("seperator_text", "--"), font_size=12)
-        self.set_bottom_label(str(artist), font_size=12)
+        self.set_top_label(str(title) if title is not None else "", font_size=12)
+        self.set_center_label(self.get_settings().get("seperator_text", "--") if (title is not None or artist is not None) else "", font_size=12)
+        self.set_bottom_label(str(artist) if artist is not None else "", font_size=12)
 
         ## Thumbnail
         thumbnail = None
         if self.get_settings().setdefault("show_thumbnail", True):
             thumbnail = self.plugin_base.mc.thumbnail(self.get_player_name())
             if thumbnail == None:
-                thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
+                idle_image = self.get_idle_icon()
+                if idle_image is not None:
+                    thumbnail = idle_image
+                else:
+                    thumbnail = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
             elif isinstance(thumbnail, list):
                 if thumbnail[0] == None:
                     return
@@ -832,6 +872,10 @@ class ThumbnailBackground(MediaAction):
         self.size_mode_selector.connect("notify::selected", self.on_change_size_mode)
         
         rows.append(self.size_mode_selector)  # type: ignore[arg-type]
+
+        if hasattr(self, "idle_icon_row") and self.idle_icon_row is not None:
+            rows.append(self.idle_icon_row)
+
         return rows
     
     def load_size_mode_default(self):
@@ -905,17 +949,21 @@ class ThumbnailBackground(MediaAction):
         
         if thumbnail_path is None:
             self.last_thumbnail_path = None
-            self.restore_original_background()
-            return
-        
-        # Load thumbnail image
-        try:
-            thumbnail = Image.open(thumbnail_path)
-        except (OSError, ValueError) as e:
-            log.error(f"Failed to load thumbnail image from {thumbnail_path}: {e}")
-            self.last_thumbnail_path = None
-            self.restore_original_background()
-            return
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                thumbnail = idle_image
+            else:
+                self.restore_original_background()
+                return
+        else:
+            # Load thumbnail image
+            try:
+                thumbnail = Image.open(thumbnail_path)
+            except (OSError, ValueError) as e:
+                log.error(f"Failed to load thumbnail image from {thumbnail_path}: {e}")
+                self.last_thumbnail_path = None
+                self.restore_original_background()
+                return
         
         # Track thumbnail path, background path, and position
         self.last_thumbnail_path = thumbnail_path
@@ -1266,6 +1314,328 @@ class ThumbnailBackground(MediaAction):
         """
         self.clear()
 
+
+def pango_desc_to_font_path(font_desc_str: str) -> str:
+    if not font_desc_str:
+        return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    try:
+        font_desc = Pango.FontDescription.from_string(font_desc_str)
+        family = font_desc.get_family() or "DejaVu Sans"
+        weight_val = int(font_desc.get_weight())
+        style_val = font_desc.get_style()
+        
+        fc_pattern = family
+        if weight_val >= 600:
+            fc_pattern += ":weight=bold"
+        elif weight_val <= 300:
+            fc_pattern += ":weight=light"
+
+        if style_val != Pango.Style.NORMAL:
+            fc_pattern += ":style=italic"
+
+        res = subprocess.run(
+            ["fc-match", "-f", "%{file}\n", fc_pattern],
+            capture_output=True,
+            text=True,
+            timeout=1.0
+        )
+        p = res.stdout.strip()
+        if p and os.path.exists(p):
+            return p
+    except Exception:
+        pass
+
+    return "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+
+
+class MediaDial(MediaAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scroll_offset = 0
+        self.last_title = ""
+        self.cached_accent_color = (40, 220, 100)
+
+    def get_config_rows(self) -> "list[Adw.PreferencesRow]":
+        # Call super to initialize player_selector and defaults
+        super().get_config_rows()
+        # Dial action acts as a dedicated widget: return only player_selector (excluding label_toggle, thumbnail_toggle, idle_icon_row)
+        return [self.player_selector]
+
+    def on_ready(self):
+        self.update_image()
+
+    def on_tick(self):
+        self.update_image()
+
+    def event_callback(self, event, data: dict = None):
+        if event == Input.Dial.Events.TURN_CW:
+            self.plugin_base.mc.next(self.get_player_name())
+            self.update_image()
+        elif event == Input.Dial.Events.TURN_CCW:
+            self.plugin_base.mc.previous(self.get_player_name())
+            self.update_image()
+        elif event in [Input.Dial.Events.DOWN, Input.Key.Events.DOWN]:
+            self.plugin_base.mc.toggle(self.get_player_name())
+            self.update_image()
+        else:
+            super().event_callback(event, data)
+
+    def on_key_down(self):
+        self.plugin_base.mc.toggle(self.get_player_name())
+        self.update_image()
+
+    def extract_accent_color(self, thumbnail: Image.Image) -> tuple[int, int, int]:
+        if thumbnail is None:
+            return (40, 220, 100)
+        try:
+            small = thumbnail.convert("RGB").resize((32, 32))
+            pixels = list(small.getdata())
+            best_color = None
+            max_sat = -1.0
+            
+            for r, g, b in pixels:
+                brightness = 0.299 * r + 0.587 * g + 0.114 * b
+                if brightness < 30 or brightness > 235:
+                    continue
+                max_c = max(r, g, b)
+                min_c = min(r, g, b)
+                if max_c == 0:
+                    continue
+                sat = (max_c - min_c) / max_c
+                if sat > max_sat:
+                    max_sat = sat
+                    best_color = (r, g, b)
+
+            if not best_color:
+                mid_pixels = [p for p in pixels if 40 <= (0.299*p[0]+0.587*p[1]+0.114*p[2]) <= 220]
+                if mid_pixels:
+                    avg_r = sum(p[0] for p in mid_pixels) // len(mid_pixels)
+                    avg_g = sum(p[1] for p in mid_pixels) // len(mid_pixels)
+                    avg_b = sum(p[2] for p in mid_pixels) // len(mid_pixels)
+                    best_color = (avg_r, avg_g, avg_b)
+                else:
+                    best_color = (40, 220, 100)
+
+            # Boost lightness so accent color tone is bright & vivid for progress bar fill
+            r, g, b = best_color
+            max_ch = max(r, g, b)
+            if max_ch < 190:
+                scale = 220.0 / max(1, max_ch)
+                r = min(255, int(r * scale))
+                g = min(255, int(g * scale))
+                b = min(255, int(b * scale))
+            return (r, g, b)
+        except Exception:
+            pass
+        return (40, 220, 100)
+
+    def load_truetype_font(self, font_path: str, font_size: int):
+        if font_size <= 0:
+            font_size = 14
+        if font_path and os.path.exists(font_path):
+            try:
+                return ImageFont.truetype(font_path, font_size)
+            except Exception:
+                pass
+        for fallback in [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf"
+        ]:
+            if os.path.exists(fallback):
+                try:
+                    return ImageFont.truetype(fallback, font_size)
+                except Exception:
+                    pass
+        return ImageFont.load_default()
+
+    def get_player_source_icon(self, player_key: str) -> Image.Image | None:
+        if not player_key:
+            player_key = "default"
+        players_dir = os.path.join(self.plugin_base.PATH, "assets", "players")
+        if os.path.isdir(players_dir):
+            for fname in os.listdir(players_dir):
+                name_no_ext = os.path.splitext(fname)[0].lower()
+                if name_no_ext == player_key.lower() or name_no_ext in player_key.lower() or player_key.lower() in name_no_ext:
+                    try:
+                        return Image.open(os.path.join(players_dir, fname))
+                    except Exception:
+                        pass
+        return None
+
+    def update_image(self):
+        if self.get_settings() is None:
+            return
+
+        player_name = self.get_player_name()
+        status = self.plugin_base.mc.status(player_name)
+        if isinstance(status, list):
+            status = status[0]
+
+        # Dial display canvas resolution strictly 200x100
+        width, height = 200, 100
+
+        # Load independent user font settings
+        settings = self.get_settings() or {}
+        artist_font_desc = settings.get("artist_font_desc", "DejaVu Sans Book 18")
+        artist_font_size = int(settings.get("artist_font_size", 18))
+        artist_outline_size = int(settings.get("artist_outline_size", 2))
+
+        song_font_desc = settings.get("song_font_desc", "DejaVu Sans Bold 30")
+        song_font_size = int(settings.get("song_font_size", 30))
+        song_outline_size = int(settings.get("song_outline_size", 2))
+
+        artist_font_path = pango_desc_to_font_path(artist_font_desc)
+        song_font_path = pango_desc_to_font_path(song_font_desc)
+
+        artist_font = self.load_truetype_font(artist_font_path, artist_font_size)
+        song_font = self.load_truetype_font(song_font_path, song_font_size)
+
+        if status is None:
+            idle_image = self.get_idle_icon()
+            if idle_image is not None:
+                self.set_media(image=idle_image.resize((width, height), Image.Resampling.LANCZOS), size=1.0)
+                return
+            bg = Image.new("RGBA", (width, height), (20, 20, 20, 255))
+            draw = ImageDraw.Draw(bg)
+            font = self.load_truetype_font(song_font_path, 15)
+            draw.text((width // 2, height // 2), "No Media Playing", fill=(180, 180, 180, 255), font=font, anchor="mm", stroke_width=song_outline_size, stroke_fill=(0, 0, 0, 255))
+            self.set_media(image=bg, size=1.0)
+            return
+
+        # Fetch metadata
+        title = self.plugin_base.mc.title(player_name)
+        if isinstance(title, list): title = title[0] if title else ""
+        title = str(title) if title else "Unknown Title"
+
+        artist = self.plugin_base.mc.artist(player_name)
+        if isinstance(artist, list): artist = artist[0] if artist else ""
+        artist = str(artist) if artist else "Unknown Artist"
+
+        position = self.plugin_base.mc.position(player_name)
+        if isinstance(position, list): position = position[0] if position else 0.0
+        position = float(position or 0.0)
+
+        duration = self.plugin_base.mc.duration(player_name)
+        if isinstance(duration, list): duration = duration[0] if duration else 0.0
+        duration = float(duration or 0.0)
+
+        player_key = self.plugin_base.mc.player_key(player_name)
+        if isinstance(player_key, list): player_key = player_key[0] if player_key else ""
+
+        # Album thumbnail
+        thumbnail = self.plugin_base.mc.thumbnail(player_name)
+        if isinstance(thumbnail, list): thumbnail = thumbnail[0]
+
+        bg_img = None
+        if thumbnail:
+            if isinstance(thumbnail, io.BytesIO):
+                try:
+                    bg_img = Image.open(thumbnail)
+                except Exception:
+                    pass
+            elif isinstance(thumbnail, str) and os.path.exists(thumbnail):
+                try:
+                    bg_img = Image.open(thumbnail)
+                except Exception:
+                    pass
+
+        # Calculate dynamic lightened accent color
+        if bg_img:
+            self.cached_accent_color = self.extract_accent_color(bg_img)
+        
+        # Build background canvas
+        if bg_img:
+            bg_canvas = ImageOps.fit(bg_img.convert("RGBA"), (width, height))
+            enhancer = ImageEnhance.Brightness(bg_canvas)
+            bg_canvas = enhancer.enhance(0.55)
+            dark_overlay = Image.new("RGBA", (width, height), (0, 0, 0, 50))
+            bg_canvas = Image.alpha_composite(bg_canvas, dark_overlay)
+        else:
+            bg_canvas = Image.new("RGBA", (width, height), (25, 25, 28, 255))
+
+        draw = ImageDraw.Draw(bg_canvas)
+
+        # Format timestamps
+        pos_min, pos_sec = int(position // 60), int(position % 60)
+        dur_min, dur_sec = int(duration // 60), int(duration % 60)
+        pos_str = f"{pos_min:02d}:{pos_sec:02d}"
+        dur_str = f"{dur_min:02d}:{dur_sec:02d}"
+        time_str = f"{pos_str}              {dur_str}"
+
+        # Update StreamController native action labels (Top for Artist, Center for Song Title, Bottom for Timestamps)
+        self.set_top_label(artist, update=False)
+        self.set_center_label(title, update=False)
+        self.set_bottom_label(time_str, update=False)
+
+        # Set default preconfigured label settings (Top: 20px, Center: 18px, Bottom: 18px, Center aligned) on initial creation
+        try:
+            top_label_obj = self.get_state().label_manager.action_labels.get("top")
+            if top_label_obj:
+                if top_label_obj.alignment is None:
+                    top_label_obj.alignment = "center"
+                if top_label_obj.font_size is None:
+                    top_label_obj.font_size = 20
+
+            center_label_obj = self.get_state().label_manager.action_labels.get("center")
+            if center_label_obj:
+                if center_label_obj.alignment is None:
+                    center_label_obj.alignment = "center"
+                if center_label_obj.font_size is None:
+                    center_label_obj.font_size = 18
+
+            bottom_label_obj = self.get_state().label_manager.action_labels.get("bottom")
+            if bottom_label_obj:
+                if bottom_label_obj.alignment is None:
+                    bottom_label_obj.alignment = "center"
+                if bottom_label_obj.font_size is None:
+                    bottom_label_obj.font_size = 18
+        except Exception:
+            pass
+
+        # Progression Bar (Clean bar above bottom label)
+        bar_y = 66
+        bar_height = 8
+        bar_margin = 10
+        bar_width = width - (bar_margin * 2)
+
+        track_bg = (45, 45, 52, 245)
+        track_border = (200, 200, 210, 255)
+        
+        draw.rounded_rectangle(
+            [bar_margin, bar_y, bar_margin + bar_width, bar_y + bar_height],
+            radius=bar_height // 2,
+            fill=track_bg,
+            outline=track_border,
+            width=1
+        )
+
+        if duration > 0:
+            progress_ratio = max(0.0, min(1.0, position / duration))
+        else:
+            progress_ratio = 0.0
+
+        fill_width = int(bar_width * progress_ratio)
+        if fill_width > 2:
+            accent_rgb = self.cached_accent_color
+            draw.rounded_rectangle(
+                [bar_margin, bar_y, bar_margin + fill_width, bar_y + bar_height],
+                radius=bar_height // 2,
+                fill=accent_rgb + (255,)
+            )
+
+        # Apply rounded corner mask to the entire canvas (radius = 12px)
+        corner_radius = 12
+        mask = Image.new("L", (width, height), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.rounded_rectangle([0, 0, width, height], radius=corner_radius, fill=255)
+
+        final_canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        final_canvas.paste(bg_canvas, (0, 0), mask)
+
+        self.set_media(image=final_canvas, size=1.0)
+
+
 class MediaPlugin(PluginBase):
     def __init__(self):
         super().__init__()
@@ -1374,6 +1744,19 @@ class MediaPlugin(PluginBase):
             }
         )
         self.add_action_holder(self.thumbnail_holder)
+
+        self.dial_holder = ActionHolder(
+            plugin_base=self,
+            action_base=MediaDial, # type: ignore[arg-type]
+            action_id_suffix="MediaDial",
+            action_name=self.lm.get("actions.dial.name"),
+            action_support={
+                Input.Key: ActionInputSupport.SUPPORTED,
+                Input.Dial: ActionInputSupport.SUPPORTED,
+                Input.Touchscreen: ActionInputSupport.UNTESTED
+            }
+        )
+        self.add_action_holder(self.dial_holder)
 
         self.register(
             plugin_name=self.lm.get("plugin.name"),

@@ -6,6 +6,7 @@
     "actions.next.name": "Nächster Titel",
     "actions.previous.name": "Vorheriger Titel",
     "actions.info.name": "Info",
+    "actions.dial.name": "Medien Dial",
     "actions.media-action.bind-to-player.label": "An App binden",
     "actions.media-action.bind-to-player.subtitle": "Die zu steuende Medienanwendung auswählen",
     "actions.media-action.show-name-switch.label": "Den Titel des spielenden Titels anzeigen",
@@ -22,5 +23,9 @@
     "settings.composite-timeout.label": "Composite-Timeout",
     "settings.composite-timeout.subtitle": "Verzögerung vor dem Zusammensetzen von Miniaturbildern (ms)",
     "settings.log-level.label": "Log-Ebene",
-    "settings.log-level.subtitle": "Kontrollen Sie die Ausführlichkeit der Plugin-Protokollierung"
+    "settings.log-level.subtitle": "Kontrollen Sie die Ausführlichkeit der Plugin-Protokollierung",
+    "actions.media-action.idle-icon.label": "Inaktives Icon",
+    "actions.media-action.idle-icon.subtitle": "Icon, das angezeigt wird, wenn keine Medien abgespielt werden",
+    "actions.media-action.idle-icon.dialog-title": "Inaktives Icon auswählen",
+    "actions.media-action.idle-icon.default-subtitle": "Keines"
 }

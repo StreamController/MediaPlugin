@@ -6,6 +6,7 @@
     "actions.next.name": "Next",
     "actions.previous.name": "Previous",
     "actions.info.name": "Info",
+    "actions.dial.name": "Media Dial",
     "actions.thumbnail.name": "Thumbnail Background",
     "actions.media-action.bind-to-player.label": "Bind to player",
     "actions.media-action.bind-to-player.subtitle": "Specify the player to control",
@@ -23,5 +24,9 @@
     "settings.composite-timeout.label": "Composite Timeout",
     "settings.composite-timeout.subtitle": "Delay before compositing thumbnails (ms)",
     "settings.log-level.label": "Log Level",
-    "settings.log-level.subtitle": "Control the verbosity of plugin logging"
+    "settings.log-level.subtitle": "Control the verbosity of plugin logging",
+    "actions.media-action.idle-icon.label": "Idle Icon",
+    "actions.media-action.idle-icon.subtitle": "Icon to show when no media is playing",
+    "actions.media-action.idle-icon.dialog-title": "Select Idle Icon",
+    "actions.media-action.idle-icon.default-subtitle": "None"
 }

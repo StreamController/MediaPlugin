@@ -6,7 +6,8 @@ from src.backend.PageManagement.Page import Page
 import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gtk, Adw
+from gi.repository import Gtk, Adw, Gio, GLib
+import globals as gl
 
 from PIL import Image, ImageEnhance
 import os
@@ -39,13 +40,26 @@ class MediaAction(ActionBase):
         self.label_toggle = Adw.SwitchRow(title=self.plugin_base.lm.get("actions.media-action.show-name-switch.label"), subtitle=self.plugin_base.lm.get("actions.media-action.show-name-switch.subtitle"))
         self.thumbnail_toggle = Adw.SwitchRow(title=self.plugin_base.lm.get("actions.media-action.show-thumbnail-switch.label"), subtitle=self.plugin_base.lm.get("actions.media-action.show-thumbnail-switch.subtitle"))
 
+        self.idle_icon_row = Adw.ActionRow(
+            title=self.plugin_base.lm.get("actions.media-action.idle-icon.label"),
+        )
+        self.choose_idle_icon_button = Gtk.Button.new_from_icon_name("document-open-symbolic")
+        self.choose_idle_icon_button.set_valign(Gtk.Align.CENTER)
+        self.idle_icon_row.add_suffix(self.choose_idle_icon_button)
+
+        self.clear_idle_icon_button = Gtk.Button.new_from_icon_name("edit-clear-symbolic")
+        self.clear_idle_icon_button.set_valign(Gtk.Align.CENTER)
+        self.idle_icon_row.add_suffix(self.clear_idle_icon_button)
+
         self.load_config_defaults()
 
         self.player_selector.connect("notify::selected-item", self.on_change_player)
         self.label_toggle.connect("notify::active", self.on_toggle_label)
         self.thumbnail_toggle.connect("notify::active", self.on_toggle_thumbnail)
+        self.choose_idle_icon_button.connect("clicked", self.on_choose_idle_icon_clicked)
+        self.clear_idle_icon_button.connect("clicked", self.on_clear_idle_icon)
 
-        return [self.player_selector, self.label_toggle, self.thumbnail_toggle]
+        return [self.player_selector, self.label_toggle, self.thumbnail_toggle, self.idle_icon_row]
 
     ## Custom methods
     def load_config_defaults(self):
@@ -55,10 +69,12 @@ class MediaAction(ActionBase):
         
         show_label = settings.setdefault("show_label", True)
         show_thumbnail = settings.setdefault("show_thumbnail", True)
+        idle_icon = settings.setdefault("idle_icon", "")
 
         # Update ui
         self.label_toggle.set_active(show_label)
         self.thumbnail_toggle.set_active(show_thumbnail)
+        self.update_idle_icon_ui(idle_icon)
         self.update_player_selector()
     
     def update_player_selector(self):
@@ -142,6 +158,52 @@ class MediaAction(ActionBase):
         self.set_settings(settings)
         # Update image
         self.on_tick()
+
+    def update_idle_icon_ui(self, path):
+        if path and os.path.isfile(path):
+            filename = os.path.basename(path)
+            self.idle_icon_row.set_subtitle(filename)
+            self.clear_idle_icon_button.set_sensitive(True)
+        else:
+            default_text = self.plugin_base.lm.get("actions.media-action.idle-icon.default-subtitle")
+            self.idle_icon_row.set_subtitle("None" if default_text is None else default_text)
+            self.clear_idle_icon_button.set_sensitive(False)
+
+    def on_choose_idle_icon_clicked(self, button):
+        settings = self.get_settings()
+        current_val = settings.get("idle_icon", "") if settings else ""
+        
+        def on_select_callback(path):
+            if not path:
+                return
+            settings = self.get_settings()
+            if settings is not None:
+                settings["idle_icon"] = path
+                self.set_settings(settings)
+                self.update_idle_icon_ui(path)
+                self.on_tick()
+
+        GLib.idle_add(gl.app.let_user_select_asset, current_val, on_select_callback)
+
+    def on_clear_idle_icon(self, button):
+        settings = self.get_settings()
+        if settings is not None:
+            settings["idle_icon"] = ""
+            self.set_settings(settings)
+            self.update_idle_icon_ui("")
+            self.on_tick()
+
+    def get_idle_icon(self) -> Image.Image | None:
+        settings = self.get_settings()
+        if settings is None:
+            return None
+        idle_icon_path = settings.get("idle_icon", "")
+        if idle_icon_path and os.path.isfile(idle_icon_path):
+            try:
+                return Image.open(idle_icon_path)
+            except Exception as e:
+                pass
+        return None
 
     def generate_image(self, icon:Image.Image = None, background:Image.Image=None, valign: float = 0, halign: float = 0, size: float = 1):
         if background is None:
