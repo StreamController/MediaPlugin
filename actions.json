@@ -1,0 +1,200 @@
+{
+    "plugin": {
+        "description": "Controls whatever is playing media on the computer - Spotify, a browser, a video player - and shows the running track with its cover art on the deck.",
+        "requirements": "A player that speaks MPRIS, which most Linux media players do."
+    },
+    "actions": {
+        "PlayPause": {
+            "description": "Starts playback if it is paused and pauses it if it is playing - the one key most setups want. It draws the cover art of the running track on the key by itself.",
+            "settings": {
+                "player_name": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Control only this player. Left out it follows whichever player is currently active, which is what most setups want.",
+                    "example": "spotify"
+                },
+                "show_thumbnail": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Draw the track's cover art as the key's background."
+                },
+                "show_label": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the track title on the key below the icon."
+                }
+            }
+        },
+        "Play": {
+            "description": "Starts playback. Use it together with Pause when play and pause should be separate keys; otherwise prefer PlayPause.",
+            "settings": {
+                "player_name": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Control only this player. Left out it follows the active player.",
+                    "example": "spotify"
+                },
+                "show_thumbnail": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Draw the track's cover art as the key's background."
+                },
+                "show_label": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the track title on the key below the icon."
+                }
+            }
+        },
+        "Pause": {
+            "description": "Pauses playback. Pair it with Play on a neighbouring key.",
+            "settings": {
+                "player_name": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Control only this player. Left out it follows the active player."
+                },
+                "show_thumbnail": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Draw the track's cover art as the key's background."
+                },
+                "show_label": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the track title on the key below the icon."
+                }
+            }
+        },
+        "Next": {
+            "description": "Skips to the next track.",
+            "settings": {
+                "player_name": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Control only this player. Left out it follows the active player."
+                },
+                "show_thumbnail": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Draw the track's cover art as the key's background."
+                },
+                "show_label": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the track title on the key below the icon."
+                }
+            }
+        },
+        "Previous": {
+            "description": "Goes back to the previous track.",
+            "settings": {
+                "player_name": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Control only this player. Left out it follows the active player."
+                },
+                "show_thumbnail": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Draw the track's cover art as the key's background."
+                },
+                "show_label": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the track title on the key below the icon."
+                }
+            }
+        },
+        "Info": {
+            "description": "Shows what is playing: the title on top, the artist at the bottom and the cover art behind them. It only displays - put it next to PlayPause to build a small player.",
+            "settings": {
+                "player_name": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Show only this player. Left out it follows the active player."
+                },
+                "show_thumbnail": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Draw the cover art as the key's background."
+                },
+                "seperator_text": {
+                    "type": "string",
+                    "default": "--",
+                    "description": "The line shown between title and artist.",
+                    "example": "-"
+                },
+                "idle_icon": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Image to show while nothing is playing. Empty leaves the key blank.",
+                    "example": "/home/user/Pictures/idle.png"
+                }
+            }
+        },
+        "Thumbnail": {
+            "description": "Draws the cover art onto the deck's background instead of onto one key. Put the same action on several keys to spread one large cover across them - each key shows its own piece.",
+            "settings": {
+                "player_name": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Show only this player. Left out it follows the active player."
+                },
+                "size_mode": {
+                    "type": "string",
+                    "default": "fill",
+                    "values": [
+                        "1x1",
+                        "2x2",
+                        "3x3",
+                        "4x4",
+                        "stretch",
+                        "fill"
+                    ],
+                    "description": "How the cover is laid out: \"fill\" and \"stretch\" spread it over every key carrying this action, the grid sizes tile it over that many keys."
+                }
+            }
+        },
+        "MediaDial": {
+            "description": "A media widget for the touch display of a Stream Deck Plus: it shows the running track with artist and cover, and the dial skips tracks.",
+            "settings": {
+                "player_name": {
+                    "type": "string",
+                    "default": null,
+                    "description": "Show only this player. Left out it follows the active player."
+                },
+                "song_font_desc": {
+                    "type": "string",
+                    "default": "DejaVu Sans Bold 30",
+                    "description": "Font for the track title, as a Pango description."
+                },
+                "song_font_size": {
+                    "type": "integer",
+                    "default": 30,
+                    "description": "Size of the track title."
+                },
+                "song_outline_size": {
+                    "type": "integer",
+                    "default": 2,
+                    "description": "Outline thickness behind the track title, so it stays readable on bright covers."
+                },
+                "artist_font_desc": {
+                    "type": "string",
+                    "default": "DejaVu Sans Book 18",
+                    "description": "Font for the artist, as a Pango description."
+                },
+                "artist_font_size": {
+                    "type": "integer",
+                    "default": 18,
+                    "description": "Size of the artist line."
+                },
+                "artist_outline_size": {
+                    "type": "integer",
+                    "default": 2,
+                    "description": "Outline thickness behind the artist line."
+                }
+            }
+        }
+    }
+}
