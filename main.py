@@ -25,11 +25,11 @@ import globals as gl
 plugin_dir = os.path.dirname(__file__)
 sys.path.insert(0, plugin_dir)
 
-from settings import PluginSettings, KEY_LOG_LEVEL, DEFAULT_LOG_LEVEL, KEY_COMPOSITE_TIMEOUT, DEFAULT_COMPOSITE_TIMEOUT
-from log_wrapper import log, set_log_level
+from MP_Settings import PluginSettings, KEY_LOG_LEVEL, DEFAULT_LOG_LEVEL, KEY_COMPOSITE_TIMEOUT, DEFAULT_COMPOSITE_TIMEOUT
+from MP_log_wrapper import log, set_log_level
 
-from MediaController import MediaController
-from MediaAction import MediaAction
+from MP_MediaController import MediaController
+from MP_MediaAction import MediaAction
 
 
 class Play(MediaAction):

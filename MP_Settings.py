@@ -107,7 +107,7 @@ class PluginSettings:
             import sys
             import os
             sys.path.insert(0, os.path.dirname(__file__))
-            from log_wrapper import set_log_level
+            from MP_log_wrapper import set_log_level
             set_log_level(level)
         except Exception as e:
             log.error(f"Failed to set log level: {e}")
