@@ -15,6 +15,7 @@ from loguru import logger as log
 class MediaController:
     def __init__(self):
         self.session_bus = dbus.SessionBus()
+        self.last_active_bus_name: str = None
 
         self.update_players()
 
@@ -55,17 +56,56 @@ class MediaController:
         Returns:
             list[dbus.Interface]: A list of dbus interfaces that match the given player name.
         """
-        ifaces = []
+        matching = []
         for player in self.mpris_players:
             properties = dbus.Interface(player, 'org.freedesktop.DBus.Properties')
             try:
                 if player_name in [None, "", properties.Get('org.mpris.MediaPlayer2', 'Identity')]:
-                    iface = dbus.Interface(player, 'org.mpris.MediaPlayer2.Player')
-                    ifaces.append(iface)
+                    matching.append((player, properties))
             except dbus.exceptions.DBusException as e:
                 if e.get_dbus_name() != "com.github.altdesktop.playerctld.NoActivePlayer":
                     log.warning(e)
-        return ifaces
+
+        if player_name not in [None, ""]:
+            players = [player for player, _ in matching]
+        else:
+            players = self.get_active_players(matching)
+
+        return [dbus.Interface(player, 'org.mpris.MediaPlayer2.Player') for player in players]
+
+    def get_active_players(self, matching: list) -> list:
+        """Narrows the players to act on when no player was picked in the settings.
+
+        Whatever is playing is the active player, and when nothing is playing it
+        is whatever played last. Acting on every player instead means one press
+        of a play/pause key resumes several of them at once: pause a video while
+        music is paused too, press play, and both start.
+
+        Args:
+            matching (list): (player, properties) pairs that match the settings.
+
+        Returns:
+            list: the players to act on, at most one unless several are playing.
+        """
+        playing = []
+        for player, properties in matching:
+            try:
+                if properties.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus') == "Playing":
+                    playing.append(player)
+            except dbus.exceptions.DBusException as e:
+                if e.get_dbus_name() != "com.github.altdesktop.playerctld.NoActivePlayer":
+                    log.warning(e)
+
+        if playing:
+            self.last_active_bus_name = str(playing[0].bus_name)
+            return playing
+
+        for player, _ in matching:
+            if str(player.bus_name) == self.last_active_bus_name:
+                return [player]
+
+        # Nothing has played yet this session, so there is nothing better to go on.
+        return matching[:1] and [matching[0][0]]
     
     def pause(self, player_name: str = None):
         """
@@ -73,7 +113,7 @@ class MediaController:
 
         Args:
             player_name (str, optional): The name of the media player to pause.
-            If not provided, all media players will be paused.
+            If not provided, the active player is used.
 
         Returns:
             None
@@ -95,7 +135,7 @@ class MediaController:
 
         Args:
             player_name (str, optional): The name of the media player to play.
-            If not provided, all media players will be played.
+            If not provided, the active player is used.
 
         Returns:
             None
@@ -117,7 +157,7 @@ class MediaController:
 
         Args:
             player_name (str, optional): The name of the media player to toggle.
-            If not provided, all media players will be toggled.
+            If not provided, the active player is used.
 
         Returns:
             None
@@ -139,7 +179,7 @@ class MediaController:
 
         Args:
             player_name (str, optional): The name of the media player to stop.
-            If not provided, all media players will be stopped.
+            If not provided, the active player is used.
 
         Returns:
             None
